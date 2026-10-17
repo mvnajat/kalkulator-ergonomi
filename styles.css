@@ -1,0 +1,31 @@
+:root{--ink:#243e50;--mut:#64748b;--dim:#94a3b8;--line:#e3eaf0;--glass:#f7faf9;--up:#166534;--down:#b91c1c;--amber:#92400e;--blue:#123c36}
+html,body,.stApp{font-family:Arial,'Segoe UI',sans-serif;color:var(--ink);background:#eef2f5}
+#MainMenu,footer,[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none}
+header[data-testid="stHeader"]{background:transparent;height:0}
+.block-container{max-width:1240px;padding:90px 24px 50px}
+section[data-testid="stSidebar"]{background:#fff;border-right:1px solid #e3eaf0}
+section[data-testid="stSidebar"] .block-container{padding-top:85px}
+.navbar{position:fixed;top:0;left:0;right:0;z-index:999;height:62px;background:linear-gradient(100deg,#123c36,#1b5147);display:flex;align-items:center;justify-content:space-between;padding:0 34px;color:#fff;box-shadow:0 2px 10px #102e231a}
+.navbrand{font-size:20px;font-weight:700}.navbrand small{font-size:12px;font-weight:400;margin-left:12px;opacity:.85}
+.navlinks{font-size:13px;display:flex;gap:25px}.navuser{font-size:12px;text-align:right;line-height:1.5}
+h1{font-size:27px!important;color:#203e35!important}h2{font-size:22px!important}h3{font-size:18px!important}
+p,label{line-height:1.6}.muted{font-size:13px;color:#708292}.section-kicker{font-size:11px;letter-spacing:1.2px;color:#4b766a;text-transform:uppercase;margin-bottom:5px}
+.welcome-box{background:white;border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:22px;box-shadow:0 4px 20px #1a324006}
+.course-card{background:#fff;border:1px solid #e1e8ee;border-radius:12px;padding:18px 18px 14px;min-height:172px;margin-bottom:4px;box-shadow:0 3px 14px #1e3a5005}
+.course-card .tag{display:inline-block;color:#155546;background:#e7f2ed;font-size:11px;padding:3px 9px;border-radius:20px;margin-bottom:12px}
+.course-card .title{font-size:16px;font-weight:600;color:#244657;margin-bottom:6px}.course-card .desc{font-size:12px;color:#6c7d8c;min-height:38px}.course-card .meta{border-top:1px solid #edf1f5;padding-top:11px;margin-top:14px;font-size:11px;color:#617685}
+.sidebox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:15px}.sidebox h3{margin:0 0 12px;font-size:16px}.side-row{padding:10px 0;border-bottom:1px solid #edf1f5;font-size:12px}.side-row:last-child{border:0}.side-row small{display:block;color:#7d8a9a;margin-top:3px}
+div[data-testid="stVerticalBlockBorderWrapper"],div[data-testid="stVerticalBlock"]>div[data-testid="stVerticalBlockBorderWrapper"]{border-radius:12px!important;border-color:#e0e8ec!important;background:white}
+[data-testid="stMetric"]{background:white;border:1px solid #e1e8ee;border-radius:12px;padding:16px}[data-testid="stMetricValue"]{color:#123c36;font-size:28px}
+.stButton button,.stDownloadButton button{border-radius:7px;border:1px solid #cdded7;color:#164c40;font-size:13px;min-height:38px}.stButton button:hover,.stDownloadButton button:hover{background:#e9f3ee;border-color:#27735c;color:#123c36}
+.stButton button[kind="primary"]{background:#123c36;color:white;border-color:#123c36}
+.stTextInput input,.stNumberInput input,.stTextArea textarea{font-size:13px;background:#fff!important;color:#243e50!important;border-radius:7px}
+div[data-baseweb="select"]>div{border-radius:7px;background:#fff}.stTabs [data-baseweb="tab-list"]{gap:18px;background:white;border-bottom:1px solid #e1e8ee}.stTabs [aria-selected="true"]{color:#185b48!important}.stTabs [data-baseweb="tab-highlight"]{background:#185b48}
+.sec{margin:20px 0 14px}.sec .ey{display:flex;align-items:center;gap:8px;color:#718096;font-size:12px}.sec .tt{font-size:21px;font-weight:600;color:#244657;margin-top:6px}.grp{display:flex;justify-content:space-between;gap:10px;margin:5px 0 16px}.grp .t{font-size:15px;font-weight:600}.grp .t span{color:#487f69;margin-right:8px}.grp .g,.sub{font-size:11px;color:#708292}.sub{margin:15px 0 9px}
+.coin{background:#fff;border:1px solid #e1e8ee;border-radius:12px;padding:18px 18px 0;margin-bottom:14px;overflow:hidden}.coin .hd{display:flex;align-items:center;gap:10px}.coin .tile{width:39px;height:39px;background:#edf5f1;border-radius:9px;display:grid;place-items:center;color:#246b5c}.coin .code{font-size:10px;color:#7b8c99}.coin .nm{font-size:15px;font-weight:600}.coin .unit{margin-left:auto;font-size:10px;color:#64748b}.coin .lbl{font-size:12px;color:#718096;margin-top:19px}.coin .val{font-size:32px;font-weight:600;color:#163f36}.coin .val .dec{color:#6d8a80}.coin .val small{font-size:14px;color:#7b8c99}.coin .row{display:flex;align-items:center;gap:7px;margin-top:10px}.coin svg.sp{display:block;width:calc(100% + 36px);margin:8px -18px 0;height:auto}.coin .bars{display:flex;gap:4px;margin:18px 0}.coin .bars i{flex:1;height:8px;background:#e8eff2;border-radius:3px}
+.pill,.trend{display:inline-block;font-size:11px;border-radius:20px;padding:4px 9px}.up{background:#e8f5eb;color:#166534}.down{background:#fef0f0;color:#b91c1c}.warn{background:#fff6df;color:#92400e}.flat{background:#edf4f2;color:#28584b}
+.mini{background:#fff;border:1px solid #e1e8ee;border-radius:10px;padding:14px;margin-bottom:12px}.mini .l,.mini .s{font-size:11px;color:#708292}.mini .v{font-size:25px;color:#123c36;margin:5px 0}
+.callout{border:1px solid #dce7e2;border-left:3px solid #337e63;background:#f7fbf9;border-radius:8px;padding:15px;margin:10px 0}.callout.err{border-left-color:#dc2626;background:#fff8f8}.callout.warn{border-left-color:#d69b2b;background:#fffbf2}.callout .tg{font-size:10px;color:#557364}.callout .ti{font-size:14px;font-weight:600;margin:7px 0}.callout .bd{font-size:12px;color:#617585;line-height:1.6}
+.tblwrap{overflow:auto;background:white;border:1px solid #e3eaf0;border-radius:10px}.tbl{width:100%;border-collapse:collapse;font-size:12px}.tbl th{background:#f7faf9;color:#557364;text-align:left;padding:13px;font-weight:500}.tbl td{padding:12px 13px;border-top:1px solid #eef2f5;color:#294354}.tbl .no{color:#94a3b8}.tbl tr:hover td{background:#fafcfb}
+@media(max-width:800px){.navbar{padding:0 16px;height:56px}.navlinks{display:none}.navbrand small{display:none}.block-container{padding:76px 12px 35px}.navuser{font-size:11px}.course-card{min-height:150px}.coin .val{font-size:27px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
