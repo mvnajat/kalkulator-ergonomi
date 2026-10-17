@@ -1,4 +1,6 @@
+import os
 import json
+import base64
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import numpy as np
@@ -30,15 +32,54 @@ st.set_page_config(
 # Custom CSS untuk menyempurnakan tampilan Forest Dark Green & memperbaiki kontras UI
 st.markdown("""
 <style>
-    /* Latar Belakang Utama */
     .stApp {
         background-color: #06110b;
         color: #e2f1e8;
     }
+    /* Padding atas dinaikkan ke 4.5rem agar header & tombol tidak terpotong */
     .block-container {
         max-width: 1420px;
-        padding-top: 2rem;
+        padding-top: 4.5rem !important;
         padding-bottom: 3rem;
+    }
+    header[data-testid="stHeader"] {
+        background: rgba(6, 17, 11, 0.75);
+        backdrop-filter: blur(6px);
+    }
+    /* Styling Logo & Nama Universitas di Pojok KIRI Atas */
+    .upb-brand {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        background: linear-gradient(135deg, #0c2619 0%, #081a11 100%);
+        border: 1px solid #23533a;
+        border-radius: 10px;
+        padding: 6px 14px;
+        height: 42px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+    .upb-brand img {
+        height: 28px;
+        width: auto;
+        object-fit: contain;
+    }
+    .upb-brand-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
+        text-align: left;
+    }
+    .upb-brand-title {
+        color: #f0fdf4;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+    }
+    .upb-brand-sub {
+        color: #4ade80;
+        font-size: 0.66rem;
+        font-weight: 600;
     }
     /* Banner Header */
     .hero-card {
@@ -47,6 +88,7 @@ st.markdown("""
         border-radius: 14px;
         padding: 22px 26px;
         margin-bottom: 20px;
+        margin-top: 8px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     }
     .hero-subtitle {
@@ -130,7 +172,7 @@ st.markdown("""
         padding-top: 8px;
         margin-top: 6px;
     }
-    /* Custom Emerald Alert (Pengganti kotak st.info biru yang tabrakan) */
+    /* Custom Emerald Alert */
     .emerald-notice {
         background-color: #0b291c;
         border: 1px solid #10b981;
@@ -166,6 +208,7 @@ st.markdown("""
         border: 1px solid #234d37;
         border-radius: 8px;
         font-weight: 600;
+        height: 42px;
         width: 100%;
         transition: 0.2s;
     }
@@ -176,6 +219,23 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+def get_logo_html() -> str:
+    """Memuat logo_upb.png jika ada di folder proyek, atau menampilkan SVG emblem UPB."""
+    for filename in ["logo_upb.png", "logo_upb.jpg", "assets/logo_upb.png"]:
+        if os.path.exists(filename):
+            with open(filename, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+            ext = "png" if filename.endswith(".png") else "jpeg"
+            return f'<img src="data:image/{ext};base64,{b64}" alt="Logo UPB">'
+    return """
+    <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 2L4 8V17C4 25.5 9.9 33.3 18 35C26.1 33.3 32 25.5 32 17V8L18 2Z" fill="#15803d" stroke="#4ade80" stroke-width="2"/>
+        <text x="18" y="22" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold" font-family="sans-serif">UPB</text>
+    </svg>
+    """
+
 
 # -----------------------------------------------------------------------------
 # 2. INISIALISASI SESSION STATE DENGAN DATA CONTOH REALISTIS (SIAP UJI)
@@ -188,7 +248,7 @@ def init_session_state():
     st.session_state["nav_page"] = "Beranda"
     st.session_state["selected_modul"] = "Modul 01 - Fisiologi Kerja"
 
-    # Identitas Praktikum
+    # Identitas Praktikum (Menggunakan join agar bebas dari SyntaxError baris baru)
     st.session_state["identitas"] = {
         "universitas": "Universitas Pelita Bangsa",
         "prodi": "Teknik Industri",
@@ -202,7 +262,12 @@ def init_session_state():
         "op2_nama": "Operator B (Praktikan 2)",
         "op2_usia": 20,
         "op2_jk": "Perempuan",
-        "anggota": "1. Anggota 1 (NIM)\n2. Anggota 2 (NIM)\n3. Anggota 3 (NIM)\n4. Anggota 4 (NIM)",
+        "anggota": "\n".join([
+            "1. Anggota 1 (NIM)",
+            "2. Anggota 2 (NIM)",
+            "3. Anggota 3 (NIM)",
+            "4. Anggota 4 (NIM)",
+        ]),
     }
 
     # Modul 01: Fisiologi (2 Operator x 2 Aktivitas)
@@ -479,13 +544,27 @@ def compile_all_calculations() -> dict:
 
 
 # -----------------------------------------------------------------------------
-# 4. NAVIGASI ATAS MODERN (MENGGANTIKAN RADIO BUTTON DENGAN SEGMENTED BAR)
+# 4. BRANDING UPB DI POJOK KIRI ATAS + NAVIGASI MENU DI SEBELAH KANAN
 # -----------------------------------------------------------------------------
 nav_options = ["Beranda", "Identitas", "Modul Praktikum", "Analisis Postur (RULA/OWAS/REBA)", "Laporan & Cadangan"]
 
-nav_cols = st.columns([1.2, 1.2, 1.5, 2.2, 1.6, 2.3])
+# Kolom 0 (paling kiri) untuk Logo & Nama Univ, Kolom 1-5 untuk tombol navigasi
+nav_cols = st.columns([2.4, 1.15, 1.15, 1.45, 2.25, 1.6])
+
+with nav_cols[0]:
+    logo_tag = get_logo_html()
+    st.markdown(f"""
+    <div class="upb-brand">
+        {logo_tag}
+        <div class="upb-brand-text">
+            <span class="upb-brand-title">UNIVERSITAS PELITA BANGSA</span>
+            <span class="upb-brand-sub">TEKNIK INDUSTRI · {st.session_state['identitas']['kelas']}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 for idx, label in enumerate(nav_options):
-    with nav_cols[idx]:
+    with nav_cols[idx + 1]:
         is_active = (st.session_state["nav_page"] == label)
         btn_label = f"🟢 {label}" if is_active else label
         if st.button(btn_label, key=f"nav_btn_{idx}", use_container_width=True):
@@ -502,7 +581,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 wib_time = datetime.now(ZoneInfo("Asia/Jakarta"))
-total_postur_records = len(st.session_state["modul_02"]["records"]) * 3  # RULA + OWAS + REBA per aktivitas
+total_postur_records = len(st.session_state["modul_02"]["records"]) * 3
 total_bukti_gambar = st.session_state["modul_02"]["bukti_gambar_count"]
 
 # -----------------------------------------------------------------------------
@@ -700,7 +779,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
     # --- MODUL 02: POSTUR KERJA ---
     elif chosen == "Modul 02 - Postur Kerja":
         st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu (RULA, OWAS, & REBA)")
-        st.info("Catatan perbaikan arsitektur: Metode REBA kini telah diintegrasikan langsung bersama RULA & OWAS agar seluruh evaluasi postur tercatat di Ringkasan Praktikum. Anda juga bisa mengakses kalkulator detailnya di tab 'Analisis Postur (RULA/OWAS/REBA)'.")
+        st.info("Metode REBA telah diintegrasikan langsung bersama RULA & OWAS agar seluruh evaluasi postur tercatat di Ringkasan Praktikum. Anda juga bisa mengakses kalkulator detailnya di tab 'Analisis Postur (RULA/OWAS/REBA)'.")
         calc_all = compile_all_calculations()
         df_m2 = pd.DataFrame(calc_all["m2_rows"], columns=[
             "Operator", "Aktivitas", "Metode", "Skor / Kode Akhir", "Action Level", "Kategori Risiko", "Rekomendasi Perbaikan"
