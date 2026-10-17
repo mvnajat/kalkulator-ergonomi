@@ -203,6 +203,7 @@ def init_session_state():
         "op2_usia": 20,
         "op2_jk": "Perempuan",
         "anggota": "1. Anggota 1 (NIM)\n2. Anggota 2 (NIM)\n3. Anggota 3 (NIM)\n4. Anggota 4 (NIM)",
+    }
 
     # Modul 01: Fisiologi (2 Operator x 2 Aktivitas)
     st.session_state["modul_01"] = {
