@@ -18,6 +18,18 @@ from utils.calculations import (
     hitung_lingkungan_perbandingan,
 )
 from utils.exporter import export_session_to_json, export_session_to_excel
+from utils.advanced_features import (
+    hitung_niosh_lifting,
+    hitung_snook_table,
+    hitung_biomekanika_l5s1,
+    buat_plot_kurva_normal,
+    buat_plot_cad_stasiun_kerja,
+    get_visual_angle_helper_svg,
+    deteksi_postur_mediapipe,
+    generate_pdf_report,
+    simpan_ke_database_antropometri,
+    ambil_rekap_database_populasi,
+)
 
 # -----------------------------------------------------------------------------
 # 1. KONFIGURASI HALAMAN (WIDE LAYOUT & TEMA FOREST GREEN)
@@ -29,14 +41,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS untuk menyempurnakan tampilan Forest Dark Green & memperbaiki kontras UI
 st.markdown("""
 <style>
     .stApp {
         background-color: #06110b;
         color: #e2f1e8;
     }
-    /* Padding atas dinaikkan ke 4.5rem agar header & tombol tidak terpotong */
     .block-container {
         max-width: 1420px;
         padding-top: 4.5rem !important;
@@ -46,7 +56,6 @@ st.markdown("""
         background: rgba(6, 17, 11, 0.75);
         backdrop-filter: blur(6px);
     }
-    /* POSISI FIXED DI POJOK KIRI ATAS LAYAR (Sejajar tombol Share di kanan atas) */
     .upb-top-left-fixed {
         position: fixed;
         top: 10px;
@@ -75,7 +84,6 @@ st.markdown("""
         letter-spacing: 0.04em;
         white-space: nowrap;
     }
-    /* Banner Header */
     .hero-card {
         background: linear-gradient(135deg, #0b2217 0%, #07170f 100%);
         border: 1px solid #1c3d2b;
@@ -104,7 +112,6 @@ st.markdown("""
         font-size: 0.92rem;
         margin: 0;
     }
-    /* Kartu Panel Samping & Modul */
     .panel-card {
         background-color: #091912;
         border: 1px solid #1b3829;
@@ -166,7 +173,6 @@ st.markdown("""
         padding-top: 8px;
         margin-top: 6px;
     }
-    /* Custom Emerald Alert */
     .emerald-notice {
         background-color: #0b291c;
         border: 1px solid #10b981;
@@ -195,7 +201,6 @@ st.markdown("""
         font-size: 0.78rem;
         opacity: 0.8;
     }
-    /* Styling Tombol Streamlit */
     div.stButton > button {
         background-color: #0c2318;
         color: #e2f1e8;
@@ -216,7 +221,6 @@ st.markdown("""
 
 
 def get_logo_html() -> str:
-    """Memuat logo_upb.png jika ada di folder proyek, atau menampilkan SVG emblem UPB."""
     for filename in ["logo_upb.png", "logo_upb.jpg", "assets/logo_upb.png"]:
         if os.path.exists(filename):
             with open(filename, "rb") as f:
@@ -242,7 +246,6 @@ def init_session_state():
     st.session_state["nav_page"] = "Beranda"
     st.session_state["selected_modul"] = "Modul 01 - Fisiologi Kerja"
 
-    # Identitas Praktikum
     st.session_state["identitas"] = {
         "universitas": "Universitas Pelita Bangsa",
         "prodi": "Teknik Industri",
@@ -264,7 +267,6 @@ def init_session_state():
         ]),
     }
 
-    # Modul 01: Fisiologi (2 Operator x 2 Aktivitas)
     st.session_state["modul_01"] = {
         "op1_akt1_nama": "Pengangkatan Beban Manual (15 kg)",
         "op1_akt1_dni": 74.0,
@@ -280,7 +282,6 @@ def init_session_state():
         "op2_akt2_dnk": 95.0,
     }
 
-    # Modul 02: Postur Kerja (RULA, OWAS, & REBA Terintegrasi)
     st.session_state["modul_02"] = {
         "records": [
             {
@@ -304,7 +305,6 @@ def init_session_state():
         "bukti_files": [],
     }
 
-    # Modul 03: Pengukuran Waktu Kerja (7 Elemen Kerja x 10 Siklus Pengamatan)
     elemen_names = [
         ("EL-01", "Mengambil bahan baku dari wadah"),
         ("EL-02", "Memposisikan benda kerja pada jig"),
@@ -334,7 +334,6 @@ def init_session_state():
         "s_level": 0.05,
     }
 
-    # Modul 04: Antropometri 32 Dimensi Tubuh (10 Sampel Praktikan)
     default_means = [
         167.5, 156.2, 138.4, 104.5, 92.0, 74.3, 64.1, 86.5, 83.2, 75.0,
         58.4, 24.5, 14.8, 56.2, 46.5, 51.0, 42.5, 44.2, 38.0, 35.4,
@@ -383,7 +382,6 @@ def init_session_state():
         m4_rows.append(r)
     st.session_state["modul_04"] = {"df_32": m4_rows}
 
-    # Modul 05: Antropometri Lanjutan (3 Dimensi Kunci x 10 Sampel + Spesifikasi Stasiun Kerja)
     st.session_state["modul_05"] = {
         "df_3dim": [
             {"Dimensi": "Tinggi Popliteal Duduk (TPD)", "Persentil Acuan": "P5", "Kelonggaran (cm)": 2.5,
@@ -395,7 +393,6 @@ def init_session_state():
         ]
     }
 
-    # Modul 06, 07, 08: Lingkungan Kerja (3 Percobaan per Kondisi)
     st.session_state["modul_06"] = {
         "dingin_suhu": [21.4, 21.8, 21.5],
         "panas_suhu": [32.6, 33.1, 32.8],
@@ -418,7 +415,22 @@ def init_session_state():
         "standar_lux": 300.0,
     }
 
-    # Catatan Analisis Praktikan per Modul
+    # FITUR 1: Modul 09 (MMH - NIOSH, Snook, & Biomekanika L5/S1)
+    st.session_state["modul_09"] = {
+        "h_cm": 32.0,
+        "v_cm": 60.0,
+        "d_cm": 45.0,
+        "a_deg": 15.0,
+        "f_lift": 2.0,
+        "coupling": "Sedang (Fair)",
+        "berat_beban": 16.0,
+        "snook_aktivitas": "Angkat (Lifting)",
+        "snook_jk": "Laki-laki",
+        "snook_persentil": "P75",
+        "bb_pekerja": 68.0,
+        "sudut_punggung": 35.0,
+    }
+
     st.session_state["analisis_modul"] = {
         "Modul 01": "Berdasarkan perhitungan %CVL, aktivitas pengangkatan beban manual menghasilkan beban kardiovaskular di atas 30% sehingga diperlukan pengaturan waktu istirahat berkala.",
         "Modul 02": "Postur pengangkatan dari lantai memiliki skor RULA, OWAS, dan REBA tertinggi. Disarankan penambahan meja angkat (scissor lift) agar operator tidak membungkuk ekstrem.",
@@ -428,6 +440,7 @@ def init_session_state():
         "Modul 06": "Suhu ruang panas (> 32°C) melebihi NAB Permenaker No. 5 Tahun 2018 (28°C) dan meningkatkan waktu penyelesaian kerja secara signifikan.",
         "Modul 07": "Paparan kebisingan (> 88 dBA) melebihi NAB 85 dBA untuk 8 jam kerja, mengganggu konsentrasi dan menurunkan kecepatan kerja operator.",
         "Modul 08": "Kondisi pencahayaan redup (< 100 Lux) berada di bawah standar SNI (min. 300 Lux untuk perakitan halus), meningkatkan ketegangan mata dan waktu siklus.",
+        "Modul 09": "Evaluasi MMH menunjukkan Lifting Index (LI) > 1.0 sehingga berat beban atau jarak jangkauan horizontal perlu direduksi agar gaya tekan L5/S1 tetap di bawah 3.400 N.",
     }
 
     st.session_state["initialized"] = True
@@ -435,8 +448,9 @@ def init_session_state():
 
 init_session_state()
 
+
 # -----------------------------------------------------------------------------
-# 3. FUNGSI KOMPILASI HASIL PERHITUNGAN UNTUK RINGKASAN & LAPORAN EXCEL
+# 3. FUNGSI KOMPILASI HASIL PERHITUNGAN UNTUK RINGKASAN, EXCEL, & PDF
 # -----------------------------------------------------------------------------
 def compile_all_calculations() -> dict:
     id_info = st.session_state["identitas"]
@@ -458,7 +472,7 @@ def compile_all_calculations() -> dict:
             res["kategori"], res["tindakan"]
         ])
 
-    # Modul 02 (RULA, OWAS, REBA)
+    # Modul 02
     m2_list = []
     for rec in st.session_state["modul_02"]["records"]:
         rp = rec["rula_params"]
@@ -515,9 +529,7 @@ def compile_all_calculations() -> dict:
             ])
 
     # Modul 06, 07, 08
-    m6 = st.session_state["modul_06"]
-    m7 = st.session_state["modul_07"]
-    m8 = st.session_state["modul_08"]
+    m6, m7, m8 = st.session_state["modul_06"], st.session_state["modul_07"], st.session_state["modul_08"]
     r6 = hitung_lingkungan_perbandingan(m6["dingin_suhu"], m6["panas_suhu"], "Dingin", "Panas", m6["nab_suhu"], "°C")
     r7 = hitung_lingkungan_perbandingan(m7["normal_db"], m7["bising_db"], "Normal", "Bising", m7["nab_db"], "dBA")
     r8 = hitung_lingkungan_perbandingan(m8["normal_lux"], m8["gelap_lux"], "Normal", "Gelap", m8["standar_lux"], "Lux")
@@ -527,6 +539,18 @@ def compile_all_calculations() -> dict:
         ["Modul 08 - Pencahayaan", "Intensitas Cahaya (Lux)", r8["Mean Normal (Lux)"], r8["Mean Gelap (Lux)"], r8["Selisih (Lux)"], r8["Ambang Batas / Standar"], r8["p-value (Uji-t)"], r8["Kesimpulan Statistik"], st.session_state["analisis_modul"]["Modul 08"]],
     ]
 
+    # Modul 09 (MMH & Biomekanika)
+    m9 = st.session_state["modul_09"]
+    res_niosh = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"])
+    res_bio = hitung_biomekanika_l5s1(m9["bb_pekerja"], m9["berat_beban"], m9["sudut_punggung"], m9["h_cm"])
+    m9_summary = {
+        "rwl": res_niosh["rwl"],
+        "li": res_niosh["li"],
+        "kategori": res_niosh["kategori"],
+        "f_kompresi_n": res_bio["f_kompresi_n"],
+        "status_l5s1": res_bio["kategori"],
+    }
+
     return {
         "m1_rows": m1_list,
         "m2_rows": m2_list,
@@ -534,6 +558,7 @@ def compile_all_calculations() -> dict:
         "m4_rows": m4_list,
         "m5_rows": m5_list,
         "env_rows": env_list,
+        "m9_summary": m9_summary,
     }
 
 
@@ -559,12 +584,11 @@ for idx, label in enumerate(nav_options):
             st.session_state["nav_page"] = label
             st.rerun()
 
-# Banner Utama
 st.markdown(f"""
 <div class="hero-card">
     <div class="hero-subtitle">{st.session_state['identitas']['universitas']} · {st.session_state['identitas']['prodi']} ({st.session_state['identitas']['kelas']})</div>
     <div class="hero-title">Ruang Praktikum Ergonomi & Perancangan Sistem Kerja</div>
-    <p class="hero-desc">Isi lembar pengamatan, periksa hasil perhitungan otomatis (Fisiologi, RULA/OWAS/REBA, Waktu Baku, Antropometri, & Lingkungan), lalu unduh laporan Excel & cadangan JSON.</p>
+    <p class="hero-desc">Dilengkapi Evaluasi Fisiologi, RULA/OWAS/REBA + AI Pose Estimation, Time Study, Antropometri + CAD 2D & Database Populasi, Lingkungan Fisik, MMH (NIOSH/Snook/L5-S1), serta Ekspor PDF & Excel.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -587,42 +611,26 @@ if st.session_state["nav_page"] == "Beranda":
                 <div class="summary-sub">Waktu Server Lokal (Asia/Jakarta)</div>
             </div>
             <div class="summary-item">
-                <div class="summary-val">8 Modul Praktikum Terintegrasi</div>
-                <div class="summary-sub">Fisiologi, postur (RULA/OWAS/REBA), waktu kerja, antropometri & lingkungan</div>
+                <div class="summary-val">9 Modul Praktikum Terintegrasi</div>
+                <div class="summary-sub">Termasuk MMH (NIOSH, Snook, Biomekanika L5/S1) & CAD 2D</div>
             </div>
             <div class="summary-item">
-                <div class="summary-val">{total_postur_records} Evaluasi Postur Dicatat</div>
-                <div class="summary-sub">RULA, OWAS, dan REBA terhitung otomatis per aktivitas</div>
+                <div class="summary-val">{total_postur_records} Evaluasi Postur + AI Pose</div>
+                <div class="summary-sub">RULA, OWAS, REBA & deteksi sudut foto otomatis</div>
             </div>
             <div class="summary-item">
-                <div class="summary-val">{total_bukti_gambar} Bukti Gambar Diunggah</div>
-                <div class="summary-sub">Dokumentasi postur kerja & sketsa stasiun kerja</div>
-            </div>
-        </div>
-
-        <div class="panel-card">
-            <h4 style="margin:0 0 12px 0; color:#f0fdf4; font-size:1.05rem;">Urutan Pengisian</h4>
-            <div class="summary-item">
-                <div class="summary-val">01 - Lengkapi Identitas</div>
-                <div class="summary-sub">Kelas ({st.session_state['identitas']['kelas']}), kelompok, anggota, dan data 2 operator</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-val">02 - Isi Lembar Pengamatan</div>
-                <div class="summary-sub">Gunakan data pengamatan asli atau modifikasi sampel terisi</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-val">03 - Periksa Hasil & Analisis</div>
-                <div class="summary-sub">Verifikasi uji statistik dan lengkapi kesimpulan tiap modul</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-val">04 - Unduh Laporan & Cadangan</div>
-                <div class="summary-sub">Ekspor ke Excel (.xlsx) multi-sheet atau simpan sesi JSON</div>
+                <div class="summary-val">Ekspor Multi-Format (PDF, XLSX, JSON, SQLite)</div>
+                <div class="summary-sub">Laporan resmi siap cetak & database antropometri lintas kelompok</div>
             </div>
         </div>
 
         <div class="emerald-notice">
-            <strong>💾 Penyimpanan Sesi & Pemulihan Instan:</strong><br>
-            Data disimpan di memori sesi aktif. Gunakan fitur <b>Ekspor / Impor JSON</b> pada tab <i>Laporan & Cadangan</i> agar data aman saat menutup browser.
+            <strong>🚀 5 Fitur Pengembangan Aktif:</strong><br>
+            1. <b>MMH & Biomekanika</b> (NIOSH RWL/LI, Snook, L5/S1)<br>
+            2. <b>Visualisasi CAD 2D & Kurva Normal</b><br>
+            3. <b>AI Pose Estimation</b> pada foto postur kerja<br>
+            4. <b>Generator Laporan PDF</b> siap cetak<br>
+            5. <b>Database Antropometri SQLite</b> & Alert NAB Otomatis
         </div>
         """, unsafe_allow_html=True)
 
@@ -630,19 +638,20 @@ if st.session_state["nav_page"] == "Beranda":
         st.markdown("<h4 style='margin:0 0 10px 0; color:#f0fdf4;'>Modul Akademik</h4>", unsafe_allow_html=True)
         search_q = st.text_input(
             "Cari modul",
-            placeholder="Cari berdasarkan nama atau nomor modul (misal: Antropometri, RULA, 03)...",
+            placeholder="Cari berdasarkan nama atau nomor modul (misal: NIOSH, Antropometri, RULA, 09)...",
             label_visibility="collapsed",
         ).strip().lower()
 
         modules_meta = [
-            ("Modul 01", "Fisiologi", "Dua operator, kondisi normal dan setelah aktivitas, nadi kerja, konsumsi energi serta perhitungan %CVL.", "Modul 01 - Fisiologi Kerja"),
-            ("Modul 02", "Postur Kerja (RULA, OWAS & REBA)", "Evaluasi postur kerja terpadu menggunakan metode RULA, OWAS, dan REBA per operator beserta rekomendasi.", "Modul 02 - Postur Kerja"),
-            ("Modul 03", "Pengukuran Waktu Kerja", "Tujuh elemen kerja, metode rating Westinghouse, rincian allowance, uji keseragaman, kecukupan & waktu baku.", "Modul 03 - Pengukuran Waktu Kerja"),
-            ("Modul 04", "Antropometri (32 Dimensi)", "32 dimensi tubuh, uji normalitas Shapiro-Wilk, perhitungan persentil (P5, P50, P95) dan acuan desain.", "Modul 04 - Antropometri 32 Dimensi"),
-            ("Modul 05", "Antropometri Lanjutan", "Uji keseragaman (BKA/BKB), kecukupan data (N'), dan spesifikasi rancangan kursi/meja stasiun kerja.", "Modul 05 - Antropometri Lanjutan"),
-            ("Modul 06", "Temperatur", "Perbandingan kondisi dingin/panas dalam tiga percobaan per kondisi beserta uji-t dan evaluasi NAB.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
-            ("Modul 07", "Kebisingan", "Perbandingan kondisi normal/bising (dBA) dalam tiga percobaan per kondisi beserta evaluasi NAB 85 dBA.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
-            ("Modul 08", "Pencahayaan", "Perbandingan kondisi normal/gelap (Lux) dalam tiga percobaan per kondisi beserta evaluasi standar SNI.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
+            ("Modul 01", "Fisiologi Kerja", "Dua operator, kondisi normal dan setelah aktivitas, nadi kerja, konsumsi energi serta perhitungan %CVL.", "Modul 01 - Fisiologi Kerja"),
+            ("Modul 02", "Postur Kerja & AI Pose", "Evaluasi postur kerja terpadu (RULA, OWAS, REBA) dilengkapi deteksi sudut otomatis dari foto.", "Modul 02 - Postur Kerja"),
+            ("Modul 03", "Pengukuran Waktu Kerja", "Tujuh elemen kerja, rating Westinghouse, allowance, uji keseragaman, kecukupan & waktu baku.", "Modul 03 - Pengukuran Waktu Kerja"),
+            ("Modul 04", "Antropometri (32 Dimensi)", "32 dimensi tubuh, uji normalitas Shapiro-Wilk, kurva Gaussian interaktif, dan Database Populasi.", "Modul 04 - Antropometri 32 Dimensi"),
+            ("Modul 05", "Antropometri Lanjutan & CAD 2D", "Uji keseragaman, kecukupan data, serta blueprint visual 2D kursi & meja stasiun kerja.", "Modul 05 - Antropometri Lanjutan"),
+            ("Modul 06", "Temperatur Ruang", "Perbandingan kondisi dingin/panas beserta uji-t dan peringatan otomatis NAB Permenaker.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
+            ("Modul 07", "Kebisingan (dBA)", "Perbandingan kondisi normal/bising (dBA) beserta evaluasi batas aman 85 dBA.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
+            ("Modul 08", "Pencahayaan (Lux)", "Perbandingan kondisi normal/gelap (Lux) beserta evaluasi standar pencahayaan SNI.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
+            ("Modul 09", "MMH (NIOSH, Snook & L5/S1)", "Perhitungan RWL & Lifting Index (NIOSH), Snook Tables, serta gaya tekan tulang belakang L5/S1.", "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)"),
         ]
 
         filtered_mods = [
@@ -659,7 +668,7 @@ if st.session_state["nav_page"] == "Beranda":
                     <span class="badge-done">Siap Olah</span>
                     <div class="mod-title">{m_title}</div>
                     <div class="mod-desc">{m_desc}</div>
-                    <div class="mod-footer">Teknik Industri · Data terintegrasi ke Laporan Excel</div>
+                    <div class="mod-footer">Teknik Industri · Data terintegrasi ke Laporan PDF & Excel</div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button(f"Buka lembar kerja {m_code}", key=f"open_{m_code}", use_container_width=True):
@@ -706,7 +715,7 @@ elif st.session_state["nav_page"] == "Identitas":
     st.success("Perubahan identitas tersimpan otomatis ke dalam sesi praktikum.")
 
 # -----------------------------------------------------------------------------
-# HALAMAN 3: MODUL PRAKTIKUM (01 s/d 08)
+# HALAMAN 3: MODUL PRAKTIKUM (01 s/d 09)
 # -----------------------------------------------------------------------------
 elif st.session_state["nav_page"] == "Modul Praktikum":
     modul_list = [
@@ -716,6 +725,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         "Modul 04 - Antropometri 32 Dimensi",
         "Modul 05 - Antropometri Lanjutan",
         "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)",
+        "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)",
     ]
     default_idx = modul_list.index(st.session_state["selected_modul"]) if st.session_state["selected_modul"] in modul_list else 0
     chosen = st.selectbox("Pilih Lembar Kerja Modul Praktikum:", modul_list, index=default_idx)
@@ -760,26 +770,47 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         ])
         st.markdown("#### 📊 Hasil Perhitungan Fisiologi Kerja (%CVL & Konsumsi Energi)")
         st.dataframe(df_m1, use_container_width=True, hide_index=True)
+
+        # FITUR 5: Validasi Otomatis %CVL
+        high_cvl = [r for r in calc_all["m1_rows"] if r[6] > 30.0]
+        if high_cvl:
+            st.warning(f"⚠️ **Validasi Fisiologi Otomatis:** Terdapat {len(high_cvl)} aktivitas dengan nilai **%CVL > 30%** ({', '.join(r[1] for r in high_cvl)}). Diperlukan penjadwalan waktu istirahat atau rotasi operator.")
+        else:
+            st.success("✅ **Validasi Fisiologi Otomatis:** Seluruh aktivitas memiliki beban kardiovaskular %CVL ≤ 30% (Aman tanpa kelelahan berarti).")
+
         st.session_state["analisis_modul"]["Modul 01"] = st.text_area(
             "Analisis & Pembahasan Modul 01:", value=st.session_state["analisis_modul"]["Modul 01"]
         )
 
-    # --- MODUL 02: POSTUR KERJA ---
+    # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
     elif chosen == "Modul 02 - Postur Kerja":
-        st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu (RULA, OWAS, & REBA)")
-        st.info("Metode REBA telah diintegrasikan langsung bersama RULA & OWAS agar seluruh evaluasi postur tercatat di Ringkasan Praktikum. Anda juga bisa mengakses kalkulator detailnya di tab 'Analisis Postur (RULA/OWAS/REBA)'.")
+        st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu & AI Pose Estimation")
         calc_all = compile_all_calculations()
         df_m2 = pd.DataFrame(calc_all["m2_rows"], columns=[
             "Operator", "Aktivitas", "Metode", "Skor / Kode Akhir", "Action Level", "Kategori Risiko", "Rekomendasi Perbaikan"
         ])
         st.dataframe(df_m2, use_container_width=True, hide_index=True)
 
-        uploaded_imgs = st.file_uploader("Unggah Bukti Foto Postur / Sketsa Kerja (JPG/PNG)", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+        st.markdown("##### 🤖 Fitur Deteksi Sudut Postur Otomatis dari Foto (MediaPipe Pose Estimation)")
+        uploaded_imgs = st.file_uploader("Unggah Foto Postur Kerja (JPG/PNG) untuk Deteksi Sudut Otomatis:", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
         if uploaded_imgs:
             st.session_state["modul_02"]["bukti_gambar_count"] = len(uploaded_imgs)
-            img_cols = st.columns(min(len(uploaded_imgs), 4))
             for i, img_f in enumerate(uploaded_imgs):
-                img_cols[i % 4].image(img_f, caption=img_f.name, use_container_width=True)
+                pose_res = deteksi_postur_mediapipe(img_f)
+                p_col1, p_col2 = st.columns([1.1, 1.9])
+                with p_col1:
+                    st.image(pose_res["annotated_image"], caption=f"{img_f.name} ({pose_res['mode']})", use_container_width=True)
+                with p_col2:
+                    st.markdown(f"**Hasil Ekstraksi Sudut Tubuh ({img_f.name}):**")
+                    st.json(pose_res["sudut"])
+                    rek = pose_res["skor_rekomendasi"]
+                    st.info(f"💡 **Rekomendasi Skor Input:** Lengan Atas = **{rek['ua']}**, Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**")
+                    if st.button(f"⚡ Terapkan Skor Ini ke Aktivitas Pertama (POST-01)", key=f"apply_pose_{i}"):
+                        rec0 = st.session_state["modul_02"]["records"][0]
+                        rec0["rula_params"].update(rek)
+                        rec0["reba_params"].update({"ua": rek["ua"], "la": min(2, rek["la"]), "neck": min(3, rek["nk"]), "trunk": rek["tr"]})
+                        st.success("Skor RULA & REBA pada POST-01 berhasil diperbarui dari foto!")
+                        st.rerun()
 
         if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
             st.session_state["nav_page"] = "Analisis Postur (RULA/OWAS/REBA)"
@@ -818,17 +849,25 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("##### 3. Hasil Perhitungan Waktu Siklus, Waktu Normal, Waktu Baku, & Uji Data")
         st.dataframe(df_res_m3, use_container_width=True, hide_index=True)
 
+        # FITUR 5: Validasi Otomatis Keseragaman & Kecukupan Data
+        tidak_cukup = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[8]) or "Belum" in str(r[8])]
+        tidak_seragam = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[6])]
+        if tidak_seragam or tidak_cukup:
+            st.error(f"⚠️ **Peringatan Validasi Statistik:** Elemen tidak seragam: {tidak_seragam or 'Tidak ada'} | Elemen belum cukup (N < N'): {tidak_cukup or 'Tidak ada'}. Lakukan pengambilan sampel tambahan atau revisi data ekstrem (outlier).")
+        else:
+            st.success("✅ **Validasi Statistik Time Study:** Seluruh elemen kerja telah **Seragam (dalam batas BKA-BKB)** dan **Cukup (N ≥ N')**.")
+
         total_wb = df_res_m3["Wb (dtk)"].sum() if not df_res_m3.empty else 0.0
         st.metric("Total Waktu Baku Siklus Produk (Σ Wb)", f"{total_wb:.2f} detik/unit", f"Kapasitas Produksi: {3600/total_wb:.1f} unit/jam" if total_wb > 0 else "")
         st.session_state["analisis_modul"]["Modul 03"] = st.text_area(
             "Analisis & Pembahasan Modul 03:", value=st.session_state["analisis_modul"]["Modul 03"]
         )
 
-    # --- MODUL 04: ANTROPOMETRI 32 DIMENSI ---
+    # --- MODUL 04: ANTROPOMETRI 32 DIMENSI + KURVA GAUSSIAN + DATABASE SQLITE ---
     elif chosen == "Modul 04 - Antropometri 32 Dimensi":
-        st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Uji Normalitas & Persentil")
+        st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Kurva Gaussian & Database Populasi")
         m4 = st.session_state["modul_04"]
-        edited_m4 = st.data_editor(pd.DataFrame(m4["df_32"]), use_container_width=True, height=420, key="ed_m4")
+        edited_m4 = st.data_editor(pd.DataFrame(m4["df_32"]), use_container_width=True, height=380, key="ed_m4")
         m4["df_32"] = edited_m4.to_dict("records")
 
         calc_all = compile_all_calculations()
@@ -836,17 +875,50 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Kode", "Nama Dimensi Tubuh", "Mean (cm)", "SD (cm)",
             "P5 (cm)", "P10 (cm)", "P50 (cm)", "P90 (cm)", "P95 (cm)", "Uji Normalitas (Shapiro-Wilk)", "Aplikasi Desain Stasiun Kerja"
         ])
-        st.markdown("##### Hasil Rekapitulasi Persentil & Uji Normalitas 32 Dimensi")
-        st.dataframe(df_res_m4, use_container_width=True, hide_index=True, height=400)
+        st.markdown("##### 📊 Hasil Rekapitulasi Persentil & Uji Normalitas 32 Dimensi")
+        st.dataframe(df_res_m4, use_container_width=True, hide_index=True, height=340)
+
+        # FITUR 2: Kurva Normal Interaktif
+        st.divider()
+        col_g1, col_g2 = st.columns([1.2, 1.8], gap="large")
+        with col_g1:
+            st.markdown("##### 📈 Visualisasi Kurva Normal (P5, P50, P95)")
+            pilihan_dim = st.selectbox("Pilih Dimensi Tubuh:", [f"{r[0]} - {r[1]}" for r in calc_all["m4_rows"]])
+            idx_d = [f"{r[0]} - {r[1]}" for r in calc_all["m4_rows"]].index(pilihan_dim)
+            sel_row = calc_all["m4_rows"][idx_d]
+            st.caption(f"**Acuan Desain:** {sel_row[10]}")
+            st.write(f"- **P5:** `{sel_row[4]} cm` | **P50:** `{sel_row[6]} cm` | **P95:** `{sel_row[8]} cm`")
+        with col_g2:
+            fig_norm = buat_plot_kurva_normal(sel_row[2], sel_row[3], f"{sel_row[0]} ({sel_row[1]})")
+            st.pyplot(fig_norm)
+
+        # FITUR 5: Database Antropometri Lintas Kelompok (SQLite)
+        st.divider()
+        st.markdown("##### 🗄️ Koleksi Database Antropometri Mahasiswa (SQLite Lintas Kelompok)")
+        db_col1, db_col2 = st.columns([1, 2])
+        with db_col1:
+            if st.button("📥 Simpan Data Kelompok Ini ke Database Populasi Kampus", use_container_width=True):
+                jml = simpan_ke_database_antropometri(
+                    st.session_state["identitas"]["kelas"],
+                    st.session_state["identitas"]["kelompok"],
+                    m4["df_32"],
+                )
+                st.success(f"Berhasil menambahkan {jml} titik pengukuran ke database antropometri kampus!")
+        with db_col2:
+            df_pop = ambil_rekap_database_populasi()
+            if not df_pop.empty:
+                st.dataframe(df_pop, use_container_width=True, hide_index=True, height=220)
+            else:
+                st.info("Database populasi masih kosong. Klik tombol di samping untuk mulai mengumpulkan sampel gabungan lintas kelompok.")
+
         st.session_state["analisis_modul"]["Modul 04"] = st.text_area(
             "Analisis & Pembahasan Modul 04:", value=st.session_state["analisis_modul"]["Modul 04"]
         )
 
-    # --- MODUL 05: ANTROPOMETRI LANJUTAN ---
+    # --- MODUL 05: ANTROPOMETRI LANJUTAN & VISUALISASI 2D CAD ---
     elif chosen == "Modul 05 - Antropometri Lanjutan":
-        st.subheader("🪑 Modul 05: Antropometri Lanjutan & Spesifikasi Rancangan Stasiun Kerja")
+        st.subheader("🪑 Modul 05: Antropometri Lanjutan & Blueprint 2D Stasiun Kerja")
         m5 = st.session_state["modul_05"]
-        st.caption("Fokus pada 3 dimensi kunci penentu rancangan stasiun kerja (Uji Keseragaman BKA/BKB, Kecukupan N', dan Penambahan Kelonggaran/Allowance).")
         edited_m5 = st.data_editor(pd.DataFrame(m5["df_3dim"]), use_container_width=True, num_rows="dynamic", key="ed_m5")
         m5["df_3dim"] = edited_m5.to_dict("records")
 
@@ -856,6 +928,16 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Status Keseragaman", "N'", "Status Kecukupan", "Persentil Acuan", "Ukuran Rancangan Final (cm)"
         ])
         st.dataframe(df_res_m5, use_container_width=True, hide_index=True)
+
+        # FITUR 2: Diagram 2D CAD Stasiun Kerja Dinamis
+        if len(calc_all["m5_rows"]) >= 3:
+            st.markdown("##### 📐 Visualisasi Blueprint 2D CAD Stasiun Kerja (Otomatis Mengikuti Ukuran Rancangan Final)")
+            tpd_val = float(calc_all["m5_rows"][0][9])
+            tsd_val = float(calc_all["m5_rows"][1][9])
+            lpd_val = float(calc_all["m5_rows"][2][9])
+            fig_cad = buat_plot_cad_stasiun_kerja(tpd_val, tsd_val, lpd_val)
+            st.pyplot(fig_cad)
+
         st.session_state["analisis_modul"]["Modul 05"] = st.text_area(
             "Analisis & Pembahasan Modul 05:", value=st.session_state["analisis_modul"]["Modul 05"]
         )
@@ -895,12 +977,77 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("#### 📊 Hasil Evaluasi Lingkungan Fisik & Uji Hipotesis Komparatif")
         st.dataframe(df_env, use_container_width=True, hide_index=True)
 
+        # FITUR 5: Peringatan NAB Otomatis Permenaker No. 5 Tahun 2018
+        mean_panas = np.mean(m6["panas_suhu"])
+        mean_bising = np.mean(m7["bising_db"])
+        mean_gelap = np.mean(m8["gelap_lux"])
+        alerts = []
+        if mean_panas > m6["nab_suhu"]:
+            alerts.append(f"Suhu Panas rata-rata (**{mean_panas:.1f}°C**) melampaui NAB Permenaker (**{m6['nab_suhu']}°C**)")
+        if mean_bising > m7["nab_db"]:
+            alerts.append(f"Kebisingan rata-rata (**{mean_bising:.1f} dBA**) melampaui NAB 8 jam (**{m7['nab_db']} dBA**)")
+        if mean_gelap < m8["standar_lux"]:
+            alerts.append(f"Pencahayaan Redup rata-rata (**{mean_gelap:.1f} Lux**) di bawah batas minimum SNI (**{m8['standar_lux']} Lux**)")
+        if alerts:
+            st.error("🚨 **Peringatan K3 Lingkungan Kerja (NAB Permenaker No. 5 Tahun 2018):**\n- " + "\n- ".join(alerts))
+
+    # --- FITUR 1: MODUL 09: MANUAL MATERIAL HANDLING (NIOSH, SNOOK, L5/S1) ---
+    elif chosen == "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)":
+        st.subheader("📦 Modul 09: Manual Material Handling (NIOSH Equation, Snook Tables & Biomekanika L5/S1)")
+        m9 = st.session_state["modul_09"]
+
+        tab_n, tab_s, tab_b = st.tabs(["1️⃣ NIOSH Lifting Equation (RWL & LI)", "2️⃣ Snook & Ciriello Tables", "3️⃣ Biomekanika Segmen L5/S1"])
+
+        with tab_n:
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                m9["h_cm"] = st.number_input("Jarak Horizontal H (cm)", 15.0, 80.0, float(m9["h_cm"]))
+                m9["v_cm"] = st.number_input("Tinggi Vertikal Awal V (cm)", 0.0, 175.0, float(m9["v_cm"]))
+            with c2:
+                m9["d_cm"] = st.number_input("Jarak Angkat Vertikal D (cm)", 25.0, 175.0, float(m9["d_cm"]))
+                m9["a_deg"] = st.number_input("Sudut Asimetri A (°)", 0.0, 135.0, float(m9["a_deg"]))
+            with c3:
+                m9["f_lift"] = st.number_input("Frekuensi Angkat F (kali/menit)", 0.2, 12.0, float(m9["f_lift"]))
+                m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", ["Baik (Good)", "Sedang (Fair)", "Buruk (Poor)"], index=1)
+                m9["berat_beban"] = st.number_input("Berat Beban Aktual L (kg)", 1.0, 60.0, float(m9["berat_beban"]))
+
+            res_n = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"])
+            k1, k2, k3 = st.columns(3)
+            k1.metric("Recommended Weight Limit (RWL)", f"{res_n['rwl']} kg")
+            k2.metric("Lifting Index (LI)", f"{res_n['li']}")
+            k3.metric("Kategori Risiko NIOSH", res_n["kategori"])
+            st.caption(f"Faktor Pengali: HM={res_n['hm']} | VM={res_n['vm']} | DM={res_n['dm']} | AM={res_n['am']} | FM={res_n['fm']} | CM={res_n['cm']}")
+            st.info(f"**Rekomendasi Perbaikan:** {res_n['rekomendasi']}")
+
+        with tab_s:
+            sc1, sc2, sc3 = st.columns(3)
+            m9["snook_aktivitas"] = sc1.selectbox("Jenis Aktivitas MMH", ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"])
+            m9["snook_jk"] = sc2.selectbox("Populasi Pekerja", ["Laki-laki", "Perempuan"])
+            m9["snook_persentil"] = sc3.selectbox("Target Persentil Populasi", ["P90", "P75", "P50"])
+            res_s = hitung_snook_table(m9["snook_aktivitas"], m9["snook_jk"], m9["snook_persentil"], m9["berat_beban"])
+            st.metric("Batas Maksimum Snook Table", f"{res_s['batas_snook_kg']} kg", res_s["status"])
+
+        with tab_b:
+            bc1, bc2 = st.columns(2)
+            m9["bb_pekerja"] = bc1.number_input("Berat Badan Operator (kg)", 40.0, 120.0, float(m9["bb_pekerja"]))
+            m9["sudut_punggung"] = bc2.slider("Sudut Membungkuk / Fleksi Punggung (°)", 0.0, 90.0, float(m9["sudut_punggung"]))
+            res_b = hitung_biomekanika_l5s1(m9["bb_pekerja"], m9["berat_beban"], m9["sudut_punggung"], m9["h_cm"])
+            bm1, bm2 = st.columns(2)
+            bm1.metric("Momen Gaya pada L5/S1", f"{res_b['momen_nm']} Nm")
+            bm2.metric("Gaya Tekan / Kompresi L5/S1", f"{res_b['f_kompresi_n']} N", res_b["kategori"])
+
+        st.session_state["analisis_modul"]["Modul 09"] = st.text_area(
+            "Analisis & Pembahasan Modul 09:", value=st.session_state["analisis_modul"]["Modul 09"]
+        )
+
 # -----------------------------------------------------------------------------
-# HALAMAN 4: KALKULATOR POSTUR KERJA LENGKAP (RULA, OWAS, & REBA TERPADU)
+# HALAMAN 4: KALKULATOR POSTUR KERJA LENGKAP (RULA, OWAS, & REBA + VISUAL HELPER)
 # -----------------------------------------------------------------------------
 elif st.session_state["nav_page"] == "Analisis Postur (RULA/OWAS/REBA)":
     st.subheader("📐 Kalkulator Evaluasi Postur Kerja Terintegrasi (RULA, OWAS, & REBA)")
-    st.caption("Semua perubahan skor pada halaman ini otomatis memperbarui metrik Ringkasan Praktikum dan Tabel Modul 02.")
+
+    # FITUR 2: Visual Angle Helper
+    st.markdown(get_visual_angle_helper_svg(), unsafe_allow_html=True)
 
     records = st.session_state["modul_02"]["records"]
     rec_labels = [f"{r['id']} · {r['operator']} - {r['aktivitas']}" for r in records]
@@ -985,39 +1132,57 @@ elif st.session_state["nav_page"] == "Analisis Postur (RULA/OWAS/REBA)":
         st.rerun()
 
 # -----------------------------------------------------------------------------
-# HALAMAN 5: LAPORAN EXCEL & CADANGAN SESI JSON
+# HALAMAN 5: LAPORAN PDF, EXCEL & CADANGAN SESI JSON
 # -----------------------------------------------------------------------------
 elif st.session_state["nav_page"] == "Laporan & Cadangan":
-    st.subheader("📥 Unduh Laporan Praktikum Lengkap (.xlsx) & Cadangan Sesi (.json)")
+    st.subheader("📥 Unduh Laporan Praktikum Resmi (.pdf / .xlsx) & Cadangan Sesi (.json)")
 
     calc_results = compile_all_calculations()
     excel_bytes = export_session_to_excel(st.session_state, calc_results)
+    pdf_bytes = generate_pdf_report(st.session_state, calc_results)
     json_str = export_session_to_json(st.session_state)
 
-    col_dl1, col_dl2 = st.columns(2, gap="large")
+    col_dl1, col_dl2, col_dl3 = st.columns(3, gap="medium")
     with col_dl1:
         st.markdown("""
         <div class="panel-card">
-            <h4 style="margin-top:0; color:#4ade80;">📊 Laporan Praktikum Excel (.xlsx)</h4>
-            <p style="font-size:0.88rem; color:#cbd5e1;">
-                Berisi 7 Worksheet rapi (Identitas, Fisiologi %CVL, Postur RULA/OWAS/REBA, Pengukuran Waktu Kerja, Antropometri 32 Dimensi, Antropometri Lanjutan, serta Evaluasi Lingkungan Fisik).
+            <h4 style="margin-top:0; color:#4ade80;">📄 Laporan Resmi PDF (.pdf)</h4>
+            <p style="font-size:0.85rem; color:#cbd5e1;">
+                Berita acara & ringkasan hasil seluruh modul praktikum lengkap dengan kolom pengesahan Dosen / Asisten Lab.
             </p>
         </div>
         """, unsafe_allow_html=True)
         st.download_button(
-            label="⬇️ Unduh Laporan Excel Lengkap (.xlsx)",
-            data=excel_bytes,
-            file_name=f"Laporan_Ergonomi_{st.session_state['identitas']['kelas']}_{st.session_state['identitas']['kelompok'].replace(' ', '_')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            label="⬇️ Unduh Laporan Resmi (.pdf)",
+            data=pdf_bytes,
+            file_name=f"Berita_Acara_Ergonomi_{st.session_state['identitas']['kelas']}_{st.session_state['identitas']['kelompok'].replace(' ', '_')}.pdf",
+            mime="application/pdf",
             use_container_width=True,
         )
 
     with col_dl2:
         st.markdown("""
         <div class="panel-card">
+            <h4 style="margin-top:0; color:#4ade80;">📊 Kertas Kerja Excel (.xlsx)</h4>
+            <p style="font-size:0.85rem; color:#cbd5e1;">
+                Berisi 7 Worksheet tabel lengkap perhitungan mentah hingga uji statistik untuk lampiran laporan praktikum.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.download_button(
+            label="⬇️ Unduh Laporan Excel (.xlsx)",
+            data=excel_bytes,
+            file_name=f"Laporan_Ergonomi_{st.session_state['identitas']['kelas']}_{st.session_state['identitas']['kelompok'].replace(' ', '_')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+    with col_dl3:
+        st.markdown("""
+        <div class="panel-card">
             <h4 style="margin-top:0; color:#4ade80;">💾 Cadangan Data Sesi (.json)</h4>
-            <p style="font-size:0.88rem; color:#cbd5e1;">
-                Simpan seluruh input data pengamatan ke file JSON lokal. Anda dapat mengunggah kembali file ini kapan saja untuk melanjutkan pengerjaan tanpa takut kehilangan data saat browser tertutup.
+            <p style="font-size:0.85rem; color:#cbd5e1;">
+                Simpan seluruh input sesi ke file JSON lokal agar dapat dilanjutkan kembali kapan saja tanpa kehilangan data.
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -1035,26 +1200,21 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
     if uploaded_json is not None:
         try:
             loaded = json.loads(uploaded_json.read().decode("utf-8"))
-            if "identitas" in loaded:
-                st.session_state["identitas"] = loaded["identitas"]
-            if "modul_01_fisiologi" in loaded:
-                st.session_state["modul_01"] = loaded["modul_01_fisiologi"]
-            if "modul_02_postur" in loaded:
-                st.session_state["modul_02"] = loaded["modul_02_postur"]
-            if "modul_03_waktu_kerja" in loaded:
-                st.session_state["modul_03"] = loaded["modul_03_waktu_kerja"]
-            if "modul_04_antropometri_32" in loaded:
-                st.session_state["modul_04"] = loaded["modul_04_antropometri_32"]
-            if "modul_05_antropometri_lanjutan" in loaded:
-                st.session_state["modul_05"] = loaded["modul_05_antropometri_lanjutan"]
-            if "modul_06_temperatur" in loaded:
-                st.session_state["modul_06"] = loaded["modul_06_temperatur"]
-            if "modul_07_kebisingan" in loaded:
-                st.session_state["modul_07"] = loaded["modul_07_kebisingan"]
-            if "modul_08_pencahayaan" in loaded:
-                st.session_state["modul_08"] = loaded["modul_08_pencahayaan"]
-            if "analisis_modul" in loaded:
-                st.session_state["analisis_modul"] = loaded["analisis_modul"]
+            for k_json, k_state in [
+                ("identitas", "identitas"),
+                ("modul_01_fisiologi", "modul_01"),
+                ("modul_02_postur", "modul_02"),
+                ("modul_03_waktu_kerja", "modul_03"),
+                ("modul_04_antropometri_32", "modul_04"),
+                ("modul_05_antropometri_lanjutan", "modul_05"),
+                ("modul_06_temperatur", "modul_06"),
+                ("modul_07_kebisingan", "modul_07"),
+                ("modul_08_pencahayaan", "modul_08"),
+                ("analisis_modul", "analisis_modul"),
+            ]:
+                if k_json in loaded:
+                    st.session_state[k_state] = loaded[k_json]
             st.success("✅ Data sesi berhasil dipulihkan dari file JSON!")
         except Exception as e:
             st.error(f"Gagal membaca file JSON: {e}")
+            
