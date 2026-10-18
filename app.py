@@ -782,7 +782,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Analisis & Pembahasan Modul 01:", value=st.session_state["analisis_modul"]["Modul 01"]
         )
 
-    # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
+    # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION (UPLOAD & KAMERA LANGSUNG) ---
     elif chosen == "Modul 02 - Postur Kerja":
         st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu & AI Pose Estimation")
         calc_all = compile_all_calculations()
@@ -791,27 +791,70 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         ])
         st.dataframe(df_m2, use_container_width=True, hide_index=True)
 
-        st.markdown("##### 🤖 Fitur Deteksi Sudut Postur Otomatis dari Foto (MediaPipe Pose Estimation)")
-        uploaded_imgs = st.file_uploader("Unggah Foto Postur Kerja (JPG/PNG) untuk Deteksi Sudut Otomatis:", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
-        if uploaded_imgs:
-            st.session_state["modul_02"]["bukti_gambar_count"] = len(uploaded_imgs)
-            for i, img_f in enumerate(uploaded_imgs):
+        st.markdown("##### 🤖 Deteksi Sudut Postur Otomatis (Unggah Foto atau Potret dari Kamera)")
+        tab_upload, tab_kamera = st.tabs(["📁 Unggah File Foto (JPG/PNG)", "📸 Potret Langsung dari Kamera"])
+
+        semua_gambar = []
+
+        with tab_upload:
+            uploaded_imgs = st.file_uploader(
+                "Pilih satu atau beberapa foto postur kerja:",
+                type=["png", "jpg", "jpeg"],
+                accept_multiple_files=True,
+                key="upload_m2"
+            )
+            if uploaded_imgs:
+                semua_gambar.extend(uploaded_imgs)
+
+        with tab_kamera:
+            st.caption("Gunakan kamera laptop (Webcam) atau kamera belakang HP saat praktikum berlangsung.")
+            aktifkan_kamera = st.checkbox("🟢 Aktifkan Kamera Perangkat", value=False)
+            if aktifkan_kamera:
+                cam_img = st.camera_input("Arahkan kamera ke samping tubuh operator lalu klik 'Take Photo'")
+                if cam_img is not None:
+                    cam_img.name = f"Kamera_Postur_{datetime.now().strftime('%H%M%S')}.jpg"
+                    semua_gambar.append(cam_img)
+
+        # Proses semua gambar dari file_uploader maupun camera_input
+        if semua_gambar:
+            st.session_state["modul_02"]["bukti_gambar_count"] = len(semua_gambar)
+            records = st.session_state["modul_02"]["records"]
+            opsi_target = [f"{r['id']} · {r['operator']} ({r['aktivitas']})" for r in records]
+
+            for i, img_f in enumerate(semua_gambar):
+                st.divider()
                 pose_res = deteksi_postur_mediapipe(img_f)
-                p_col1, p_col2 = st.columns([1.1, 1.9])
+                p_col1, p_col2 = st.columns([1.1, 1.9], gap="medium")
                 with p_col1:
                     st.image(pose_res["annotated_image"], caption=f"{img_f.name} ({pose_res['mode']})", use_container_width=True)
                 with p_col2:
-                    st.markdown(f"**Hasil Ekstraksi Sudut Tubuh ({img_f.name}):**")
+                    st.markdown(f"**Hasil Ekstraksi Sudut Tubuh (`{img_f.name}`):**")
                     st.json(pose_res["sudut"])
                     rek = pose_res["skor_rekomendasi"]
-                    st.info(f"💡 **Rekomendasi Skor Input:** Lengan Atas = **{rek['ua']}**, Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**")
-                    if st.button(f"⚡ Terapkan Skor Ini ke Aktivitas Pertama (POST-01)", key=f"apply_pose_{i}"):
-                        rec0 = st.session_state["modul_02"]["records"][0]
-                        rec0["rula_params"].update(rek)
-                        rec0["reba_params"].update({"ua": rek["ua"], "la": min(2, rek["la"]), "neck": min(3, rek["nk"]), "trunk": rek["tr"]})
-                        st.success("Skor RULA & REBA pada POST-01 berhasil diperbarui dari foto!")
+                    st.info(
+                        f"💡 **Rekomendasi Skor Input:** Lengan Atas = **{rek['ua']}**, "
+                        f"Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**"
+                    )
+
+                    target_idx = st.selectbox(
+                        "Pilih Aktivitas Tujuan:",
+                        range(len(records)),
+                        format_func=lambda x: opsi_target[x],
+                        key=f"target_rec_{i}"
+                    )
+                    if st.button(f"⚡ Terapkan Skor ke {records[target_idx]['id']}", key=f"apply_pose_{i}"):
+                        rec_target = st.session_state["modul_02"]["records"][target_idx]
+                        rec_target["rula_params"].update(rek)
+                        rec_target["reba_params"].update({
+                            "ua": rek["ua"],
+                            "la": min(2, rek["la"]),
+                            "neck": min(3, rek["nk"]),
+                            "trunk": rek["tr"]
+                        })
+                        st.success(f"Skor RULA & REBA pada {rec_target['id']} berhasil diperbarui dari foto!")
                         st.rerun()
 
+        st.divider()
         if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
             st.session_state["nav_page"] = "Analisis Postur (RULA/OWAS/REBA)"
             st.rerun()
