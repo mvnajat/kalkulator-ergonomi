@@ -32,7 +32,7 @@ from utils.advanced_features import (
 )
 
 # -----------------------------------------------------------------------------
-# 1. KONFIGURASI HALAMAN (WIDE LAYOUT & TEMA FOREST GREEN)
+# 1. KONFIGURASI HALAMAN (WIDE LAYOUT & TEMA WIREFRAME LIGHT MINIMALIST)
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="IE Toolkit | Praktikum Ergonomi",
@@ -43,9 +43,10 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+    /* Paksa latar belakang aplikasi tetap terang bersih ala wireframe */
     .stApp {
-        background-color: #06110b;
-        color: #e2f1e8;
+        background-color: #f8fafc;
+        color: #1e293b;
     }
     .block-container {
         max-width: 1420px;
@@ -53,9 +54,12 @@ st.markdown("""
         padding-bottom: 3rem;
     }
     header[data-testid="stHeader"] {
-        background: rgba(6, 17, 11, 0.75);
+        background: rgba(248, 250, 252, 0.85);
         backdrop-filter: blur(6px);
+        border-bottom: 1px solid #e2e8f0;
     }
+    
+    /* Header Navigasi Kiri Atas */
     .upb-top-left-fixed {
         position: fixed;
         top: 10px;
@@ -64,12 +68,12 @@ st.markdown("""
         display: flex;
         align-items: center;
         gap: 10px;
-        background: linear-gradient(135deg, #0c2619 0%, #081a11 100%);
-        border: 1px solid #23533a;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 6px 14px;
         height: 38px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         pointer-events: none;
     }
     .upb-top-left-fixed img {
@@ -78,23 +82,25 @@ st.markdown("""
         object-fit: contain;
     }
     .upb-brand-title {
-        color: #f0fdf4;
+        color: #0f172a;
         font-size: 0.82rem;
         font-weight: 700;
         letter-spacing: 0.04em;
         white-space: nowrap;
     }
+
+    /* Hero Banner Utama */
     .hero-card {
-        background: linear-gradient(135deg, #0b2217 0%, #07170f 100%);
-        border: 1px solid #1c3d2b;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 14px;
         padding: 22px 26px;
         margin-bottom: 20px;
         margin-top: 8px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
     .hero-subtitle {
-        color: #34d399;
+        color: #15803d;
         font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.08em;
@@ -102,40 +108,37 @@ st.markdown("""
         margin-bottom: 6px;
     }
     .hero-title {
-        color: #f0fdf4;
+        color: #0f172a;
         font-size: 1.65rem;
         font-weight: 700;
         margin: 0 0 6px 0;
     }
     .hero-desc {
-        color: #9ca3af;
+        color: #64748b;
         font-size: 0.92rem;
         margin: 0;
     }
-    .panel-card {
-        background-color: #091912;
-        border: 1px solid #1b3829;
+
+    /* Kartu Panel & Modul Minimalis */
+    .panel-card, .module-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 18px 20px;
         margin-bottom: 16px;
-    }
-    .module-card {
-        background-color: #091912;
-        border: 1px solid #1b3829;
-        border-radius: 12px;
-        padding: 18px 20px;
-        margin-bottom: 10px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
         transition: all 0.2s ease;
     }
     .module-card:hover {
-        border-color: #22c55e;
-        box-shadow: 0 4px 14px rgba(34, 197, 94, 0.12);
+        border-color: #15803d;
+        box-shadow: 0 4px 12px rgba(21, 128, 61, 0.08);
     }
+
     .badge-pill {
         display: inline-block;
-        background-color: #112e1f;
-        color: #4ade80;
-        border: 1px solid #1f5137;
+        background-color: #f0fdf4;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
         font-size: 0.72rem;
         font-weight: 600;
         padding: 3px 10px;
@@ -144,67 +147,72 @@ st.markdown("""
     }
     .badge-done {
         display: inline-block;
-        background-color: #064e3b;
-        color: #6ee7b7;
-        border: 1px solid #10b981;
+        background-color: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
         font-size: 0.72rem;
         font-weight: 600;
         padding: 3px 10px;
         border-radius: 999px;
         margin-left: 6px;
     }
+
     .mod-title {
-        color: #f0fdf4;
+        color: #0f172a;
         font-size: 1.15rem;
         font-weight: 700;
         margin: 0 0 6px 0;
     }
     .mod-desc {
-        color: #94a3b8;
+        color: #64748b;
         font-size: 0.85rem;
         line-height: 1.45;
         min-height: 40px;
         margin-bottom: 12px;
     }
     .mod-footer {
-        color: #64748b;
+        color: #94a3b8;
         font-size: 0.76rem;
-        border-top: 1px solid #142a1e;
+        border-top: 1px solid #f1f5f9;
         padding-top: 8px;
         margin-top: 6px;
     }
+
+    /* Kartu Informasi & Notifikasi Bersih */
     .emerald-notice {
-        background-color: #0b291c;
-        border: 1px solid #10b981;
-        border-left: 4px solid #22c55e;
-        color: #a7f3d0;
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-left: 4px solid #15803d;
+        color: #166534;
         border-radius: 10px;
         padding: 13px 16px;
         font-size: 0.85rem;
         line-height: 1.45;
         margin-top: 10px;
     }
+
     .summary-item {
-        border-bottom: 1px solid #142a1e;
+        border-bottom: 1px solid #f1f5f9;
         padding: 10px 0;
     }
     .summary-item:last-child {
         border-bottom: none;
     }
     .summary-val {
-        color: #f0fdf4;
+        color: #0f172a;
         font-weight: 700;
         font-size: 0.92rem;
     }
     .summary-sub {
-        color: #86efac;
+        color: #64748b;
         font-size: 0.78rem;
-        opacity: 0.8;
     }
+
+    /* Styling Tombol Streamlit Clean Light */
     div.stButton > button {
-        background-color: #0c2318;
-        color: #e2f1e8;
-        border: 1px solid #234d37;
+        background-color: #ffffff;
+        color: #1e293b;
+        border: 1px solid #cbd5e1;
         border-radius: 8px;
         font-weight: 600;
         height: 42px;
@@ -212,9 +220,9 @@ st.markdown("""
         transition: 0.2s;
     }
     div.stButton > button:hover {
-        background-color: #153c28;
-        border-color: #4ade80;
-        color: #ffffff;
+        background-color: #f1f5f9;
+        border-color: #15803d;
+        color: #15803d;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -415,7 +423,6 @@ def init_session_state():
         "standar_lux": 300.0,
     }
 
-    # FITUR 1: Modul 09 (MMH - NIOSH, Snook, & Biomekanika L5/S1)
     st.session_state["modul_09"] = {
         "h_cm": 32.0,
         "v_cm": 60.0,
@@ -456,7 +463,6 @@ def compile_all_calculations() -> dict:
     id_info = st.session_state["identitas"]
     m1 = st.session_state["modul_01"]
 
-    # Modul 01
     m1_list = []
     configs_m1 = [
         (id_info["op1_nama"], m1["op1_akt1_nama"], id_info["op1_usia"], id_info["op1_jk"], m1["op1_akt1_dni"], m1["op1_akt1_dnk"]),
@@ -472,7 +478,6 @@ def compile_all_calculations() -> dict:
             res["kategori"], res["tindakan"]
         ])
 
-    # Modul 02
     m2_list = []
     for rec in st.session_state["modul_02"]["records"]:
         rp = rec["rula_params"]
@@ -487,7 +492,6 @@ def compile_all_calculations() -> dict:
         reba_res = hitung_reba(rbp["neck"], rbp["trunk"], rbp["legs"], rbp["load"], rbp["ua"], rbp["la"], rbp["wr"], rbp["coup"], rbp["act"])
         m2_list.append([rec["operator"], rec["aktivitas"], "REBA", f"Skor {reba_res['final_score']}", f"Level {reba_res['action_level']}", reba_res["kategori"], reba_res["rekomendasi"]])
 
-    # Modul 03
     m3_state = st.session_state["modul_03"]
     p_west = sum(m3_state["westinghouse"].values())
     allow_total = m3_state["allowance_pribadi"] + m3_state["allowance_kelelahan"] + m3_state["allowance_hambatan"]
@@ -502,7 +506,6 @@ def compile_all_calculations() -> dict:
                 res["wn"], res["wb"], res["output_standar_per_jam"]
             ])
 
-    # Modul 04
     m4_list = []
     for row in st.session_state["modul_04"]["df_32"]:
         vals = [row.get(f"P{i+1}", 0.0) for i in range(10)]
@@ -514,7 +517,6 @@ def compile_all_calculations() -> dict:
                 res["normalitas"], row.get("Aplikasi Desain", "")
             ])
 
-    # Modul 05
     m5_list = []
     for row in st.session_state["modul_05"]["df_3dim"]:
         vals = [row.get(f"S{i+1}", 0.0) for i in range(10)]
@@ -528,7 +530,6 @@ def compile_all_calculations() -> dict:
                 res["seragam"], res["n_prime"], res["cukup"], row.get("Persentil Acuan", "P50"), ukuran_desain
             ])
 
-    # Modul 06, 07, 08
     m6, m7, m8 = st.session_state["modul_06"], st.session_state["modul_07"], st.session_state["modul_08"]
     r6 = hitung_lingkungan_perbandingan(m6["dingin_suhu"], m6["panas_suhu"], "Dingin", "Panas", m6["nab_suhu"], "°C")
     r7 = hitung_lingkungan_perbandingan(m7["normal_db"], m7["bising_db"], "Normal", "Bising", m7["nab_db"], "dBA")
@@ -539,7 +540,6 @@ def compile_all_calculations() -> dict:
         ["Modul 08 - Pencahayaan", "Intensitas Cahaya (Lux)", r8["Mean Normal (Lux)"], r8["Mean Gelap (Lux)"], r8["Selisih (Lux)"], r8["Ambang Batas / Standar"], r8["p-value (Uji-t)"], r8["Kesimpulan Statistik"], st.session_state["analisis_modul"]["Modul 08"]],
     ]
 
-    # Modul 09 (MMH & Biomekanika)
     m9 = st.session_state["modul_09"]
     res_niosh = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"])
     res_bio = hitung_biomekanika_l5s1(m9["bb_pekerja"], m9["berat_beban"], m9["sudut_punggung"], m9["h_cm"])
@@ -605,7 +605,7 @@ if st.session_state["nav_page"] == "Beranda":
     with left_col:
         st.markdown(f"""
         <div class="panel-card">
-            <h4 style="margin:0 0 12px 0; color:#f0fdf4; font-size:1.05rem;">Ringkasan Praktikum</h4>
+            <h4 style="margin:0 0 12px 0; color:#0f172a; font-size:1.05rem;">Ringkasan Praktikum</h4>
             <div class="summary-item">
                 <div class="summary-val">{wib_time.strftime('%d-%m-%Y · %H:%M WIB')}</div>
                 <div class="summary-sub">Waktu Server Lokal (Asia/Jakarta)</div>
@@ -635,7 +635,7 @@ if st.session_state["nav_page"] == "Beranda":
         """, unsafe_allow_html=True)
 
     with right_col:
-        st.markdown("<h4 style='margin:0 0 10px 0; color:#f0fdf4;'>Modul Akademik</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin:0 0 10px 0; color:#0f172a;'>Modul Akademik</h4>", unsafe_allow_html=True)
         search_q = st.text_input(
             "Cari modul",
             placeholder="Cari berdasarkan nama atau nomor modul (misal: NIOSH, Antropometri, RULA, 09)...",
@@ -771,7 +771,6 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("#### 📊 Hasil Perhitungan Fisiologi Kerja (%CVL & Konsumsi Energi)")
         st.dataframe(df_m1, use_container_width=True, hide_index=True)
 
-        # FITUR 5: Validasi Otomatis %CVL
         high_cvl = [r for r in calc_all["m1_rows"] if r[6] > 30.0]
         if high_cvl:
             st.warning(f"⚠️ **Validasi Fisiologi Otomatis:** Terdapat {len(high_cvl)} aktivitas dengan nilai **%CVL > 30%** ({', '.join(r[1] for r in high_cvl)}). Diperlukan penjadwalan waktu istirahat atau rotasi operator.")
@@ -782,7 +781,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Analisis & Pembahasan Modul 01:", value=st.session_state["analisis_modul"]["Modul 01"]
         )
 
-    # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION (UPLOAD & KAMERA LANGSUNG) ---
+    # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
     elif chosen == "Modul 02 - Postur Kerja":
         st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu & AI Pose Estimation")
         calc_all = compile_all_calculations()
@@ -815,7 +814,6 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
                     cam_img.name = f"Kamera_Postur_{datetime.now().strftime('%H%M%S')}.jpg"
                     semua_gambar.append(cam_img)
 
-        # Proses semua gambar dari file_uploader maupun camera_input
         if semua_gambar:
             st.session_state["modul_02"]["bukti_gambar_count"] = len(semua_gambar)
             records = st.session_state["modul_02"]["records"]
@@ -892,7 +890,6 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("##### 3. Hasil Perhitungan Waktu Siklus, Waktu Normal, Waktu Baku, & Uji Data")
         st.dataframe(df_res_m3, use_container_width=True, hide_index=True)
 
-        # FITUR 5: Validasi Otomatis Keseragaman & Kecukupan Data
         tidak_cukup = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[8]) or "Belum" in str(r[8])]
         tidak_seragam = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[6])]
         if tidak_seragam or tidak_cukup:
@@ -906,7 +903,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Analisis & Pembahasan Modul 03:", value=st.session_state["analisis_modul"]["Modul 03"]
         )
 
-    # --- MODUL 04: ANTROPOMETRI 32 DIMENSI + KURVA GAUSSIAN + DATABASE SQLITE ---
+    # --- MODUL 04: ANTROPOMETRI 32 DIMENSI ---
     elif chosen == "Modul 04 - Antropometri 32 Dimensi":
         st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Kurva Gaussian & Database Populasi")
         m4 = st.session_state["modul_04"]
@@ -921,7 +918,6 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("##### 📊 Hasil Rekapitulasi Persentil & Uji Normalitas 32 Dimensi")
         st.dataframe(df_res_m4, use_container_width=True, hide_index=True, height=340)
 
-        # FITUR 2: Kurva Normal Interaktif
         st.divider()
         col_g1, col_g2 = st.columns([1.2, 1.8], gap="large")
         with col_g1:
@@ -933,9 +929,9 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             st.write(f"- **P5:** `{sel_row[4]} cm` | **P50:** `{sel_row[6]} cm` | **P95:** `{sel_row[8]} cm`")
         with col_g2:
             fig_norm = buat_plot_kurva_normal(sel_row[2], sel_row[3], f"{sel_row[0]} ({sel_row[1]})")
-            st.pyplot(fig_norm)
+            if fig_norm:
+                st.pyplot(fig_norm)
 
-        # FITUR 5: Database Antropometri Lintas Kelompok (SQLite)
         st.divider()
         st.markdown("##### 🗄️ Koleksi Database Antropometri Mahasiswa (SQLite Lintas Kelompok)")
         db_col1, db_col2 = st.columns([1, 2])
@@ -958,7 +954,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Analisis & Pembahasan Modul 04:", value=st.session_state["analisis_modul"]["Modul 04"]
         )
 
-    # --- MODUL 05: ANTROPOMETRI LANJUTAN & VISUALISASI 2D CAD ---
+    # --- MODUL 05: ANTROPOMETRI LANJUTAN & CAD 2D ---
     elif chosen == "Modul 05 - Antropometri Lanjutan":
         st.subheader("🪑 Modul 05: Antropometri Lanjutan & Blueprint 2D Stasiun Kerja")
         m5 = st.session_state["modul_05"]
@@ -972,14 +968,14 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         ])
         st.dataframe(df_res_m5, use_container_width=True, hide_index=True)
 
-        # FITUR 2: Diagram 2D CAD Stasiun Kerja Dinamis
         if len(calc_all["m5_rows"]) >= 3:
             st.markdown("##### 📐 Visualisasi Blueprint 2D CAD Stasiun Kerja (Otomatis Mengikuti Ukuran Rancangan Final)")
             tpd_val = float(calc_all["m5_rows"][0][9])
             tsd_val = float(calc_all["m5_rows"][1][9])
             lpd_val = float(calc_all["m5_rows"][2][9])
             fig_cad = buat_plot_cad_stasiun_kerja(tpd_val, tsd_val, lpd_val)
-            st.pyplot(fig_cad)
+            if fig_cad:
+                st.pyplot(fig_cad)
 
         st.session_state["analisis_modul"]["Modul 05"] = st.text_area(
             "Analisis & Pembahasan Modul 05:", value=st.session_state["analisis_modul"]["Modul 05"]
@@ -1020,7 +1016,6 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("#### 📊 Hasil Evaluasi Lingkungan Fisik & Uji Hipotesis Komparatif")
         st.dataframe(df_env, use_container_width=True, hide_index=True)
 
-        # FITUR 5: Peringatan NAB Otomatis Permenaker No. 5 Tahun 2018
         mean_panas = np.mean(m6["panas_suhu"])
         mean_bising = np.mean(m7["bising_db"])
         mean_gelap = np.mean(m8["gelap_lux"])
@@ -1034,7 +1029,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         if alerts:
             st.error("🚨 **Peringatan K3 Lingkungan Kerja (NAB Permenaker No. 5 Tahun 2018):**\n- " + "\n- ".join(alerts))
 
-    # --- FITUR 1: MODUL 09: MANUAL MATERIAL HANDLING (NIOSH, SNOOK, L5/S1) ---
+    # --- MODUL 09: MANUAL MATERIAL HANDLING ---
     elif chosen == "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)":
         st.subheader("📦 Modul 09: Manual Material Handling (NIOSH Equation, Snook Tables & Biomekanika L5/S1)")
         m9 = st.session_state["modul_09"]
@@ -1062,6 +1057,15 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             st.caption(f"Faktor Pengali: HM={res_n['hm']} | VM={res_n['vm']} | DM={res_n['dm']} | AM={res_n['am']} | FM={res_n['fm']} | CM={res_n['cm']}")
             st.info(f"**Rekomendasi Perbaikan:** {res_n['rekomendasi']}")
 
+            # Keterunutan Rumus (Traceability)
+            with st.expander("🔍 Lihat Penelusuran Rumus & Substitusi NIOSH"):
+                st.markdown(f"""
+                * **Rumus Dasar:** $\\text{{RWL}} = LC \\times HM \\times VM \\times DM \\times AM \\times FM \\times CM$
+                * **Substitusi Angka:** $23 \\times {res_n['hm']} \\times {res_n['vm']} \\times {res_n['dm']} \\times {res_n['am']} \\times {res_n['fm']} \\times {res_n['cm']}$
+                * **Hasil Akhir RWL:** **{res_n['rwl']} kg**
+                * **Lifting Index (LI):** $\\frac{{\\text{{Beban Aktual}}(\\text{{{m9['berat\_beban']}}})}}{{\\text{{RWL}}(\\text{{{res\_n['rwl']}}})}} = \\mathbf{{{res_n['li']}}}$
+                """)
+
         with tab_s:
             sc1, sc2, sc3 = st.columns(3)
             m9["snook_aktivitas"] = sc1.selectbox("Jenis Aktivitas MMH", ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"])
@@ -1084,12 +1088,10 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         )
 
 # -----------------------------------------------------------------------------
-# HALAMAN 4: KALKULATOR POSTUR KERJA LENGKAP (RULA, OWAS, & REBA + VISUAL HELPER)
+# HALAMAN 4: KALKULATOR POSTUR KERJA LENGKAP
 # -----------------------------------------------------------------------------
 elif st.session_state["nav_page"] == "Analisis Postur (RULA/OWAS/REBA)":
     st.subheader("📐 Kalkulator Evaluasi Postur Kerja Terintegrasi (RULA, OWAS, & REBA)")
-
-    # FITUR 2: Visual Angle Helper
     st.markdown(get_visual_angle_helper_svg(), unsafe_allow_html=True)
 
     records = st.session_state["modul_02"]["records"]
@@ -1189,8 +1191,8 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
     with col_dl1:
         st.markdown("""
         <div class="panel-card">
-            <h4 style="margin-top:0; color:#4ade80;">📄 Laporan Resmi PDF (.pdf)</h4>
-            <p style="font-size:0.85rem; color:#cbd5e1;">
+            <h4 style="margin-top:0; color:#15803d;">📄 Laporan Resmi PDF (.pdf)</h4>
+            <p style="font-size:0.85rem; color:#64748b;">
                 Berita acara & ringkasan hasil seluruh modul praktikum lengkap dengan kolom pengesahan Dosen / Asisten Lab.
             </p>
         </div>
@@ -1206,8 +1208,8 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
     with col_dl2:
         st.markdown("""
         <div class="panel-card">
-            <h4 style="margin-top:0; color:#4ade80;">📊 Kertas Kerja Excel (.xlsx)</h4>
-            <p style="font-size:0.85rem; color:#cbd5e1;">
+            <h4 style="margin-top:0; color:#15803d;">📊 Kertas Kerja Excel (.xlsx)</h4>
+            <p style="font-size:0.85rem; color:#64748b;">
                 Berisi 7 Worksheet tabel lengkap perhitungan mentah hingga uji statistik untuk lampiran laporan praktikum.
             </p>
         </div>
@@ -1223,8 +1225,8 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
     with col_dl3:
         st.markdown("""
         <div class="panel-card">
-            <h4 style="margin-top:0; color:#4ade80;">💾 Cadangan Data Sesi (.json)</h4>
-            <p style="font-size:0.85rem; color:#cbd5e1;">
+            <h4 style="margin-top:0; color:#15803d;">💾 Cadangan Data Sesi (.json)</h4>
+            <p style="font-size:0.85rem; color:#64748b;">
                 Simpan seluruh input sesi ke file JSON lokal agar dapat dilanjutkan kembali kapan saja tanpa kehilangan data.
             </p>
         </div>
