@@ -1057,14 +1057,15 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             st.caption(f"Faktor Pengali: HM={res_n['hm']} | VM={res_n['vm']} | DM={res_n['dm']} | AM={res_n['am']} | FM={res_n['fm']} | CM={res_n['cm']}")
             st.info(f"**Rekomendasi Perbaikan:** {res_n['rekomendasi']}")
 
-            # Keterunutan Rumus (Traceability)
+            # Keterunutan Rumus (Traceability) yang diperbaiki
             with st.expander("🔍 Lihat Penelusuran Rumus & Substitusi NIOSH"):
-                st.markdown(f"""
-                * **Rumus Dasar:** $\\text{{RWL}} = LC \\times HM \\times VM \\times DM \\times AM \\times FM \\times CM$
-                * **Substitusi Angka:** $23 \\times {res_n['hm']} \\times {res_n['vm']} \\times {res_n['dm']} \\times {res_n['am']} \\times {res_n['fm']} \\times {res_n['cm']}$
-                * **Hasil Akhir RWL:** **{res_n['rwl']} kg**
-                * **Lifting Index (LI):** $\\frac{{\\text{{Beban Aktual}}(\\text{{{m9['berat\_beban']}}})}}{{\\text{{RWL}}(\\text{{{res\_n['rwl']}}})}} = \\mathbf{{{res_n['li']}}}$
-                """)
+                formula_teks = (
+                    "Rumus Dasar: RWL = LC x HM x VM x DM x AM x FM x CM\n"
+                    f"Substitusi Angka: 23 x {res_n['hm']} x {res_n['vm']} x {res_n['dm']} x {res_n['am']} x {res_n['fm']} x {res_n['cm']}\n"
+                    f"Hasil Akhir RWL: {res_n['rwl']} kg\n"
+                    f"Lifting Index (LI): Beban Aktual ({m9['berat_beban']}) / RWL ({res_n['rwl']}) = {res_n['li']}"
+                )
+                st.text(formula_teks)
 
         with tab_s:
             sc1, sc2, sc3 = st.columns(3)
