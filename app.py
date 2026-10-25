@@ -746,7 +746,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 01: FISIOLOGI ---
     if chosen == "Modul 01 - Fisiologi Kerja":
-        st.subheader("🫀 Modul 01: Fisiologi Kerja & Beban Kardiovaskular (%CVL)")
+        st.subheader("🫀 Modul 01: Fisiologi Kerja & Beban Kardiovaskular (%CVL)", anchor="modul-01-fisiologi")
         m1 = st.session_state["modul_01"]
         id_info = st.session_state["identitas"]
 
@@ -795,7 +795,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
     elif chosen == "Modul 02 - Postur Kerja":
-        st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu & AI Pose Estimation")
+        st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu & AI Pose Estimation", anchor="modul-02-postur")
         calc_all = compile_all_calculations()
         df_m2 = pd.DataFrame(calc_all["m2_rows"], columns=[
             "Operator", "Aktivitas", "Metode", "Skor / Kode Akhir", "Action Level", "Kategori Risiko", "Rekomendasi Perbaikan"
@@ -874,7 +874,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 03: PENGUKURAN WAKTU KERJA ---
     elif chosen == "Modul 03 - Pengukuran Waktu Kerja":
-        st.subheader("⏱️ Modul 03: Pengukuran Waktu Kerja (Time Study)")
+        st.subheader("⏱️ Modul 03: Pengukuran Waktu Kerja (Time Study)", anchor="modul-03-waktu-kerja")
         m3 = st.session_state["modul_03"]
 
         st.markdown("##### 1. Tabel Waktu Siklus Pengamatan (10 Siklus dalam Detik)")
@@ -918,7 +918,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 04: ANTROPOMETRI 32 DIMENSI ---
     elif chosen == "Modul 04 - Antropometri 32 Dimensi":
-        st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Kurva Gaussian & Database Populasi")
+        st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Kurva Gaussian & Database Populasi", anchor="modul-04-antropometri")
         m4 = st.session_state["modul_04"]
         m4["df_32"] = edit_table_rows(
             st.session_state, m4["df_32"], "ed_m4", st.data_editor,
@@ -985,7 +985,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 05: ANTROPOMETRI LANJUTAN & CAD 2D ---
     elif chosen == "Modul 05 - Antropometri Lanjutan":
-        st.subheader("🪑 Modul 05: Antropometri Lanjutan & Blueprint 2D Stasiun Kerja")
+        st.subheader("🪑 Modul 05: Antropometri Lanjutan & Blueprint 2D Stasiun Kerja", anchor="modul-05-antropometri-lanjutan")
         m5 = st.session_state["modul_05"]
         m5["df_3dim"] = edit_table_rows(
             st.session_state, m5["df_3dim"], "ed_m5", st.data_editor,
@@ -1014,7 +1014,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 06, 07, 08: LINGKUNGAN KERJA ---
     elif chosen == "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)":
-        st.subheader("🌡️🔊💡 Modul 06, 07, & 08: Lingkungan Fisik Kerja")
+        st.subheader("🌡️🔊💡 Modul 06, 07, & 08: Lingkungan Fisik Kerja", anchor="modul-06-07-08-lingkungan")
         m6, m7, m8 = st.session_state["modul_06"], st.session_state["modul_07"], st.session_state["modul_08"]
 
         t_col1, t_col2, t_col3 = st.columns(3, gap="medium")
@@ -1066,7 +1066,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
     # --- MODUL 09: MANUAL MATERIAL HANDLING ---
     elif chosen == "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)":
-        st.subheader("📦 Modul 09: Manual Material Handling (NIOSH Equation, Snook Tables & Biomekanika L5/S1)")
+        st.subheader("📦 Modul 09: Manual Material Handling (NIOSH Equation, Snook Tables & Biomekanika L5/S1)", anchor="modul-09-mmh")
         m9 = st.session_state["modul_09"]
 
         tab_n, tab_s, tab_b = st.tabs(["1️⃣ NIOSH Lifting Equation (RWL & LI)", "2️⃣ Snook & Ciriello Tables", "3️⃣ Biomekanika Segmen L5/S1"])
