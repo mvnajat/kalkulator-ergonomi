@@ -680,6 +680,7 @@ if st.session_state["nav_page"] == "Beranda":
                 """, unsafe_allow_html=True)
                 if st.button(f"Buka lembar kerja {m_code}", key=f"open_{m_code}", use_container_width=True):
                     st.session_state["selected_modul"] = target_key
+                    st.session_state["_ui_selected_modul"] = target_key
                     st.session_state["nav_page"] = "Modul Praktikum"
                     st.rerun()
 
@@ -734,8 +735,11 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)",
         "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)",
     ]
-    default_idx = modul_list.index(st.session_state["selected_modul"]) if st.session_state["selected_modul"] in modul_list else 0
-    chosen = st.selectbox("Pilih Lembar Kerja Modul Praktikum:", modul_list, index=default_idx)
+    if st.session_state.get("_ui_selected_modul") not in modul_list:
+        st.session_state["_ui_selected_modul"] = (
+            st.session_state["selected_modul"] if st.session_state["selected_modul"] in modul_list else modul_list[0]
+        )
+    chosen = st.selectbox("Pilih Lembar Kerja Modul Praktikum:", modul_list, key="_ui_selected_modul")
     st.session_state["selected_modul"] = chosen
     prepare_editor_scope(st.session_state, f"Modul Praktikum:{chosen}")
     st.divider()
@@ -1078,15 +1082,19 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             with c3:
                 m9["f_lift"] = st.number_input("Frekuensi Angkat F (kali/menit)", 0.2, 12.0, float(m9["f_lift"]))
                 durasi_options = ["≤ 1 jam", "> 1–2 jam", "> 2–8 jam"]
+                if st.session_state.get("_ui_m9_durasi") not in durasi_options:
+                    saved_duration = m9.get("durasi_angkat", "≤ 1 jam")
+                    st.session_state["_ui_m9_durasi"] = saved_duration if saved_duration in durasi_options else durasi_options[0]
                 m9["durasi_angkat"] = st.selectbox(
                     "Durasi Total Aktivitas Angkat",
                     durasi_options,
-                    index=durasi_options.index(m9.get("durasi_angkat", "≤ 1 jam"))
-                    if m9.get("durasi_angkat", "≤ 1 jam") in durasi_options else 0,
+                    key="_ui_m9_durasi",
                 )
                 coupling_options = ["Baik (Good)", "Sedang (Fair)", "Buruk (Poor)"]
-                coupling_index = coupling_options.index(m9["coupling"]) if m9["coupling"] in coupling_options else 1
-                m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", coupling_options, index=coupling_index)
+                if st.session_state.get("_ui_m9_coupling") not in coupling_options:
+                    saved_coupling = m9.get("coupling", "Sedang (Fair)")
+                    st.session_state["_ui_m9_coupling"] = saved_coupling if saved_coupling in coupling_options else coupling_options[1]
+                m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", coupling_options, key="_ui_m9_coupling")
                 m9["berat_beban"] = st.number_input("Berat Beban Aktual L (kg)", 1.0, 60.0, float(m9["berat_beban"]))
 
             res_n = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"], m9["durasi_angkat"])
@@ -1118,18 +1126,16 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             aktivitas_options = ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"]
             jk_options = ["Laki-laki", "Perempuan"]
             persentil_options = ["P90", "P75", "P50"]
-            m9["snook_aktivitas"] = sc1.selectbox(
-                "Jenis Aktivitas MMH", aktivitas_options,
-                index=aktivitas_options.index(m9["snook_aktivitas"]) if m9["snook_aktivitas"] in aktivitas_options else 0,
-            )
-            m9["snook_jk"] = sc2.selectbox(
-                "Populasi Pekerja", jk_options,
-                index=jk_options.index(m9["snook_jk"]) if m9["snook_jk"] in jk_options else 0,
-            )
-            m9["snook_persentil"] = sc3.selectbox(
-                "Target Persentil Populasi", persentil_options,
-                index=persentil_options.index(m9["snook_persentil"]) if m9["snook_persentil"] in persentil_options else 1,
-            )
+            for field, options, fallback in (("snook_aktivitas", aktivitas_options, "Angkat (Lifting)"),
+                                             ("snook_jk", jk_options, "Laki-laki"),
+                                             ("snook_persentil", persentil_options, "P75")):
+                widget_key = f"_ui_{field}"
+                if st.session_state.get(widget_key) not in options:
+                    saved = m9.get(field, fallback)
+                    st.session_state[widget_key] = saved if saved in options else fallback
+            m9["snook_aktivitas"] = sc1.selectbox("Jenis Aktivitas MMH", aktivitas_options, key="_ui_snook_aktivitas")
+            m9["snook_jk"] = sc2.selectbox("Populasi Pekerja", jk_options, key="_ui_snook_jk")
+            m9["snook_persentil"] = sc3.selectbox("Target Persentil Populasi", persentil_options, key="_ui_snook_persentil")
             res_s = hitung_snook_table(m9["snook_aktivitas"], m9["snook_jk"], m9["snook_persentil"], m9["berat_beban"])
             st.metric("Contoh Batas Ilustratif (bukan tabel Snook resmi)", f"{res_s['batas_snook_kg']} kg", res_s["status"])
             st.warning("Angka ini hanya **simulasi edukatif**, bukan hasil tabel Liberty Mutual/Snook & Ciriello yang tervalidasi. "
@@ -1311,6 +1317,9 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
         try:
             loaded = json.loads(uploaded_json.getvalue().decode("utf-8"))
             restore_session_from_json(st.session_state, loaded)
+            for widget_key in ("_ui_m9_durasi", "_ui_m9_coupling", "_ui_snook_aktivitas",
+                               "_ui_snook_jk", "_ui_snook_persentil"):
+                st.session_state.pop(widget_key, None)
             st.session_state["_json_restore_success"] = True
             st.rerun()
         except Exception as e:

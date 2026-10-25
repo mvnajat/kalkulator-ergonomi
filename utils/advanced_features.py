@@ -414,7 +414,8 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
         pdf.multi_cell(0, 5, _clean_pdf_text(value))
 
     def section(title):
-        if pdf.get_y() > 266:
+        # Sisakan ruang untuk judul dan beberapa baris; hindari judul menggantung di bawah halaman.
+        if pdf.get_y() > 230:
             pdf.add_page()
         pdf.ln(3)
         pdf.set_font("Helvetica", "B", 10)
