@@ -17,7 +17,7 @@ from utils.calculations import (
     hitung_antropometri_statistik,
     hitung_lingkungan_perbandingan,
 )
-from utils.exporter import export_session_to_json, export_session_to_excel
+from utils.exporter import export_session_to_json, export_session_to_excel, restore_session_from_json
 from utils.table_editor import prepare_editor_scope, edit_table_rows
 from utils.advanced_features import (
     hitung_niosh_lifting,
@@ -1059,7 +1059,9 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
                 m9["a_deg"] = st.number_input("Sudut Asimetri A (°)", 0.0, 135.0, float(m9["a_deg"]))
             with c3:
                 m9["f_lift"] = st.number_input("Frekuensi Angkat F (kali/menit)", 0.2, 12.0, float(m9["f_lift"]))
-                m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", ["Baik (Good)", "Sedang (Fair)", "Buruk (Poor)"], index=1)
+                coupling_options = ["Baik (Good)", "Sedang (Fair)", "Buruk (Poor)"]
+                coupling_index = coupling_options.index(m9["coupling"]) if m9["coupling"] in coupling_options else 1
+                m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", coupling_options, index=coupling_index)
                 m9["berat_beban"] = st.number_input("Berat Beban Aktual L (kg)", 1.0, 60.0, float(m9["berat_beban"]))
 
             res_n = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"])
@@ -1082,9 +1084,21 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
         with tab_s:
             sc1, sc2, sc3 = st.columns(3)
-            m9["snook_aktivitas"] = sc1.selectbox("Jenis Aktivitas MMH", ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"])
-            m9["snook_jk"] = sc2.selectbox("Populasi Pekerja", ["Laki-laki", "Perempuan"])
-            m9["snook_persentil"] = sc3.selectbox("Target Persentil Populasi", ["P90", "P75", "P50"])
+            aktivitas_options = ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"]
+            jk_options = ["Laki-laki", "Perempuan"]
+            persentil_options = ["P90", "P75", "P50"]
+            m9["snook_aktivitas"] = sc1.selectbox(
+                "Jenis Aktivitas MMH", aktivitas_options,
+                index=aktivitas_options.index(m9["snook_aktivitas"]) if m9["snook_aktivitas"] in aktivitas_options else 0,
+            )
+            m9["snook_jk"] = sc2.selectbox(
+                "Populasi Pekerja", jk_options,
+                index=jk_options.index(m9["snook_jk"]) if m9["snook_jk"] in jk_options else 0,
+            )
+            m9["snook_persentil"] = sc3.selectbox(
+                "Target Persentil Populasi", persentil_options,
+                index=persentil_options.index(m9["snook_persentil"]) if m9["snook_persentil"] in persentil_options else 1,
+            )
             res_s = hitung_snook_table(m9["snook_aktivitas"], m9["snook_jk"], m9["snook_persentil"], m9["berat_beban"])
             st.metric("Batas Maksimum Snook Table", f"{res_s['batas_snook_kg']} kg", res_s["status"])
 
@@ -1255,25 +1269,15 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
 
     st.divider()
     st.markdown("#### 🔄 Pulihkan Data dari File Cadangan JSON")
+    if st.session_state.pop("_json_restore_success", False):
+        st.success("✅ Data sesi berhasil dipulihkan dari file JSON!")
     uploaded_json = st.file_uploader("Unggah file .json hasil cadangan sebelumnya:", type=["json"])
-    if uploaded_json is not None:
+    if uploaded_json is not None and st.button("🔄 Pulihkan Data dari File Ini"):
         try:
-            loaded = json.loads(uploaded_json.read().decode("utf-8"))
-            for k_json, k_state in [
-                ("identitas", "identitas"),
-                ("modul_01_fisiologi", "modul_01"),
-                ("modul_02_postur", "modul_02"),
-                ("modul_03_waktu_kerja", "modul_03"),
-                ("modul_04_antropometri_32", "modul_04"),
-                ("modul_05_antropometri_lanjutan", "modul_05"),
-                ("modul_06_temperatur", "modul_06"),
-                ("modul_07_kebisingan", "modul_07"),
-                ("modul_08_pencahayaan", "modul_08"),
-                ("analisis_modul", "analisis_modul"),
-            ]:
-                if k_json in loaded:
-                    st.session_state[k_state] = loaded[k_json]
-            st.success("✅ Data sesi berhasil dipulihkan dari file JSON!")
+            loaded = json.loads(uploaded_json.getvalue().decode("utf-8"))
+            restore_session_from_json(st.session_state, loaded)
+            st.session_state["_json_restore_success"] = True
+            st.rerun()
         except Exception as e:
             st.error(f"Gagal membaca file JSON: {e}")
             

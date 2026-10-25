@@ -1,26 +1,47 @@
 import io
 import json
+from collections.abc import MutableMapping
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 
+SESSION_BACKUP_FIELDS = (
+    ("identitas", "identitas"),
+    ("modul_01_fisiologi", "modul_01"),
+    ("modul_02_postur", "modul_02"),
+    ("modul_03_waktu_kerja", "modul_03"),
+    ("modul_04_antropometri_32", "modul_04"),
+    ("modul_05_antropometri_lanjutan", "modul_05"),
+    ("modul_06_temperatur", "modul_06"),
+    ("modul_07_kebisingan", "modul_07"),
+    ("modul_08_pencahayaan", "modul_08"),
+    ("modul_09_mmh", "modul_09"),
+    ("analisis_modul", "analisis_modul"),
+)
+
+
 def export_session_to_json(state_dict: dict) -> str:
     """Mengekspor seluruh data praktikum dari session_state ke format JSON terstruktur."""
-    export_data = {
-        "identitas": state_dict.get("identitas", {}),
-        "modul_01_fisiologi": state_dict.get("modul_01", {}),
-        "modul_02_postur": state_dict.get("modul_02", {}),
-        "modul_03_waktu_kerja": state_dict.get("modul_03", {}),
-        "modul_04_antropometri_32": state_dict.get("modul_04", {}),
-        "modul_05_antropometri_lanjutan": state_dict.get("modul_05", {}),
-        "modul_06_temperatur": state_dict.get("modul_06", {}),
-        "modul_07_kebisingan": state_dict.get("modul_07", {}),
-        "modul_08_pencahayaan": state_dict.get("modul_08", {}),
-        "analisis_modul": state_dict.get("analisis_modul", {}),
-    }
+    export_data = {json_key: state_dict.get(state_key, {}) for json_key, state_key in SESSION_BACKUP_FIELDS}
     return json.dumps(export_data, indent=2, ensure_ascii=False)
+
+
+def restore_session_from_json(state: MutableMapping, backup: dict) -> None:
+    """Pulihkan bidang yang tersedia, termasuk backup lama tanpa Modul 09."""
+    if not isinstance(backup, dict):
+        raise ValueError("Format cadangan harus berupa objek JSON.")
+
+    restored = {}
+    for json_key, state_key in SESSION_BACKUP_FIELDS:
+        if json_key in backup:
+            if not isinstance(backup[json_key], dict):
+                raise ValueError(f"Data '{json_key}' harus berupa objek JSON.")
+            restored[state_key] = backup[json_key]
+
+    for state_key, value in restored.items():
+        state[state_key] = value
 
 
 def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
