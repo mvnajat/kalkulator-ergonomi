@@ -82,8 +82,14 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
         for r_idx, row_data in enumerate(rows, start=start_row + 1):
             for col_idx, val in enumerate(row_data, start=1):
                 cell = ws.cell(row=r_idx, column=col_idx, value=val)
+                # Teks bebas dari pengguna tidak boleh berubah menjadi rumus Excel.
+                if isinstance(val, str) and val.startswith(("=", "+", "-", "@")):
+                    cell.data_type = "s"
                 cell.font = reg_font
                 cell.border = thin_border
+                if isinstance(val, (int, float)) and not isinstance(val, bool):
+                    cell.number_format = "0.00"
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
                 if (r_idx - start_row) % 2 == 0:
                     cell.fill = zebra_fill
         # Auto-fit lebar kolom
@@ -159,8 +165,95 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
     env_rows = calc_results.get("env_rows", [])
     write_table(ws_env, 4, [
         "Modul", "Parameter Uji", "Rata-rata Kondisi Normal/Dingin", "Rata-rata Kondisi Ekstrem/Bising/Gelap",
-        "Selisih", "Standar NAB / SNI", "p-value (Uji-t)", "Kesimpulan Statistik", "Analisis & Rekomendasi"
+        "Selisih", "Acuan Perbandingan Praktikum", "p-value (Uji-t)", "Kesimpulan Statistik", "Analisis & Rekomendasi"
     ], env_rows)
+
+    # 8. Sheet Modul 09, termasuk input lengkap dan hasil perhitungan.
+    ws_m9 = wb.create_sheet("09_MMH")
+    style_worksheet(ws_m9, "MODUL 09 - MANUAL MATERIAL HANDLING (NIOSH, SNOOK, BIOMEKANIKA)")
+    m9 = state_dict.get("modul_09", {})
+    summary = calc_results.get("m9_summary", {})
+    labels_m9 = [
+        ("h_cm", "Jarak horizontal H (cm)"), ("v_cm", "Tinggi awal V (cm)"),
+        ("d_cm", "Jarak angkat D (cm)"), ("a_deg", "Sudut asimetri A (derajat)"),
+        ("f_lift", "Frekuensi (kali/menit)"), ("durasi_angkat", "Durasi pengangkatan"),
+        ("coupling", "Coupling"), ("berat_beban", "Berat beban (kg)"),
+        ("snook_aktivitas", "Aktivitas Snook (simulasi)"),
+        ("snook_jk", "Populasi pekerja (simulasi)"),
+        ("snook_persentil", "Persentil (simulasi)"),
+        ("bb_pekerja", "Berat badan pekerja (kg)"),
+        ("sudut_punggung", "Sudut punggung (derajat)"),
+    ]
+    m9_rows = [[label, m9.get(key, "-")] for key, label in labels_m9]
+    m9_rows += [
+        ["NIOSH RWL (kg)", summary.get("rwl")],
+        ["NIOSH Lifting Index", summary.get("li")],
+        ["Kategori NIOSH", summary.get("kategori", "-")],
+        ["Estimasi kompresi L5/S1 (N)", summary.get("f_kompresi_n")],
+        ["Status model L5/S1", summary.get("status_l5s1", "-")],
+        ["Keterbatasan", "Tabel Snook hanya simulasi; L5/S1 model sederhana; penilaian akhir memerlukan pengukuran ergonomi nyata."],
+    ]
+    write_table(ws_m9, 4, ["Parameter", "Nilai / Hasil"], m9_rows)
+
+    # Sheet pengamatan mentah membuat angka ringkasan dapat diperiksa ulang.
+    def write_observations(sheet_name, title, records, key_label, second_label, sample_prefix):
+        ws = wb.create_sheet(sheet_name)
+        style_worksheet(ws, title)
+        sample_names = [f"{sample_prefix}{i}" for i in range(1, 11)]
+        rows = []
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            if sheet_name == "05_Data_Mentah":
+                metadata = f"Acuan {rec.get('Persentil Acuan', '-')}; kelonggaran {rec.get('Kelonggaran (cm)', 0)} cm"
+            elif sheet_name == "04_Data_Mentah":
+                metadata = rec.get("Aplikasi Desain", "")
+            else:
+                metadata = ""
+            rows.append([rec.get(key_label, ""), rec.get(second_label, "")]
+                        + [rec.get(col) for col in sample_names]
+                        + [None, None, metadata])
+        write_table(ws, 4, ["Kode / Dimensi", "Nama / Elemen"] + sample_names +
+                    ["Rata-rata (rumus)", "SD Sampel (rumus)", "Keterangan"], rows)
+        for row_number in range(5, 5 + len(rows)):
+            sample_range = f"C{row_number}:L{row_number}"
+            ws[f"M{row_number}"] = f'=IF(COUNT({sample_range})=0,"",AVERAGE({sample_range}))'
+            ws[f"N{row_number}"] = f'=IF(COUNT({sample_range})<2,"",STDEV.S({sample_range}))'
+            ws[f"M{row_number}"].number_format = "0.00"
+            ws[f"N{row_number}"].number_format = "0.00"
+        ws.freeze_panes = "C5"
+
+    m3 = state_dict.get("modul_03", {})
+    m4 = state_dict.get("modul_04", {})
+    m5 = state_dict.get("modul_05", {})
+    write_observations("03_Data_Mentah", "MODUL 03 - 10 OBSERVASI WAKTU SIKLUS (detik)",
+                       m3.get("df_siklus", []), "Kode", "Elemen Kerja", "S")
+    write_observations("04_Data_Mentah", "MODUL 04 - 10 SAMPEL ANTROPOMETRI (cm)",
+                       m4.get("df_32", []), "Kode", "Dimensi Tubuh", "P")
+    write_observations("05_Data_Mentah", "MODUL 05 - 10 SAMPEL DIMENSI RANCANGAN (cm)",
+                       m5.get("df_3dim", []), "Dimensi", "Dimensi", "S")
+
+    ws_env_raw = wb.create_sheet("06_08_Data_Mentah")
+    style_worksheet(ws_env_raw, "MODUL 06-08 - HASIL PENGUKURAN (masing-masing 3 percobaan)")
+    observations = []
+    for module_key, fields in (
+        ("modul_06", (("dingin_suhu", "Temperatur dingin (°C)"), ("panas_suhu", "Temperatur panas (°C)"),
+                      ("dingin_waktu", "Waktu kondisi dingin (detik)"), ("panas_waktu", "Waktu kondisi panas (detik)"))),
+        ("modul_07", (("normal_db", "Kebisingan normal (dBA)"), ("bising_db", "Kebisingan bising (dBA)"),
+                      ("normal_waktu", "Waktu kondisi normal (detik)"), ("bising_waktu", "Waktu kondisi bising (detik)"))),
+        ("modul_08", (("normal_lux", "Cahaya normal (lux)"), ("gelap_lux", "Cahaya redup (lux)"),
+                      ("normal_waktu", "Waktu kondisi normal (detik)"), ("gelap_waktu", "Waktu kondisi redup (detik)"))),
+    ):
+        for key, label in fields:
+            values = state_dict.get(module_key, {}).get(key, [])
+            observations.append([module_key.replace("modul_", "Modul "), label] + list(values[:3]))
+    write_table(ws_env_raw, 4, ["Modul", "Parameter", "Percobaan 1", "Percobaan 2", "Percobaan 3"], observations)
+
+    # Data mentah ditempatkan di samping ringkasan yang relevan.
+    order = ["00_Identitas", "01_Fisiologi", "02_Postur_Kerja", "03_Waktu_Kerja", "03_Data_Mentah",
+             "04_Antropometri_32D", "04_Data_Mentah", "05_Antropometri_Lanjutan", "05_Data_Mentah",
+             "06_08_Lingkungan_Kerja", "06_08_Data_Mentah", "09_MMH"]
+    wb._sheets = [wb[name] for name in order]
 
     output = io.BytesIO()
     wb.save(output)

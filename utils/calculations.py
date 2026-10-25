@@ -38,6 +38,23 @@ ANTROPOMETRI_32_DIMENSI = [
     ("D32", "Lebar Telapak Kaki (LTK)", "cm"),
 ]
 
+
+def _positive_measurements(values: list) -> np.ndarray:
+    """Kosong/0 adalah sampel belum diisi; tolak nilai tak hingga dan bukan angka."""
+    numbers = []
+    for raw in values:
+        if raw is None or str(raw).strip() == "":
+            continue
+        try:
+            val = float(raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Data pengukuran bukan angka: {raw!r}") from exc
+        if not np.isfinite(val) or val < 0:
+            raise ValueError("Data pengukuran harus angka positif atau kosong.")
+        if val > 0:
+            numbers.append(val)
+    return np.asarray(numbers, dtype=float)
+
 def hitung_fisiologi_cvl(dn_istirahat: float, dn_kerja: float, usia: int, jk: str = "Laki-laki") -> dict:
     """Menghitung %CVL (Cardiovascular Load), Denyut Nadi Maksimum, dan Konsumsi Energi."""
     dn_max = (220 - usia) if jk == "Laki-laki" else (200 - usia)
@@ -311,7 +328,7 @@ def hitung_waktu_kerja(observations: list, p_westinghouse: float, allowance_pct:
     Menghitung Waktu Siklus (Ws), Waktu Normal (Wn), Waktu Baku (Wb),
     serta Uji Keseragaman (BKA/BKB) dan Uji Kecukupan Data (N').
     """
-    arr = np.array([float(x) for x in observations if x is not None and float(x) > 0])
+    arr = _positive_measurements(observations)
     n = len(arr)
     if n == 0:
         return {}
@@ -326,7 +343,7 @@ def hitung_waktu_kerja(observations: list, p_westinghouse: float, allowance_pct:
     sum_x2 = float(np.sum(arr ** 2))
     numerator = (k_level / s_level) * np.sqrt(max(0.0, n * sum_x2 - (sum_x ** 2)))
     n_prime = (numerator / sum_x) ** 2 if sum_x > 0 else 0.0
-    cukup = bool(n >= n_prime)
+    cukup = bool(n >= 2 and n >= n_prime)
 
     # Faktor Penyesuaian (p = 1 + rating Westinghouse)
     p_factor = 1.0 + p_westinghouse
@@ -353,7 +370,7 @@ def hitung_waktu_kerja(observations: list, p_westinghouse: float, allowance_pct:
 
 def hitung_antropometri_statistik(values: list, k_level: float = 2.0, s_level: float = 0.05) -> dict:
     """Menghitung Rata-rata, SD, BKA, BKB, N', Persentil (P5, P10, P50, P90, P95), dan Uji Normalitas Shapiro-Wilk."""
-    arr = np.array([float(x) for x in values if x is not None and float(x) > 0])
+    arr = _positive_measurements(values)
     n = len(arr)
     if n == 0:
         return {}
@@ -368,7 +385,7 @@ def hitung_antropometri_statistik(values: list, k_level: float = 2.0, s_level: f
     sum_x2 = float(np.sum(arr ** 2))
     numerator = (k_level / s_level) * np.sqrt(max(0.0, n * sum_x2 - (sum_x ** 2)))
     n_prime = (numerator / sum_x) ** 2 if sum_x > 0 else 0.0
-    cukup = bool(n >= n_prime)
+    cukup = bool(n >= 3 and n >= n_prime)
 
     # Persentil Normal (Parametrik)
     p5 = mean_val - 1.645 * std_val
@@ -382,7 +399,7 @@ def hitung_antropometri_statistik(values: list, k_level: float = 2.0, s_level: f
         stat_sw, p_val = stats.shapiro(arr)
         normal_status = "Normal (p > 0.05)" if p_val > 0.05 else "Tidak Normal (p <= 0.05)"
     else:
-        stat_sw, p_val = 1.0, 1.0
+        stat_sw, p_val = None, None
         normal_status = "Sampel < 3 / Konstan"
 
     return {
@@ -399,7 +416,7 @@ def hitung_antropometri_statistik(values: list, k_level: float = 2.0, s_level: f
         "p50": round(p50, 2),
         "p90": round(p90, 2),
         "p95": round(p95, 2),
-        "shapiro_p": round(float(p_val), 4),
+        "shapiro_p": round(float(p_val), 4) if p_val is not None else None,
         "normalitas": normal_status,
     }
 

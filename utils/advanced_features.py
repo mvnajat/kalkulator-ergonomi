@@ -6,11 +6,11 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-# Aman dari ModuleNotFoundError untuk Matplotlib
+# Grafik bersifat opsional bila lingkungan tidak menyediakan cache yang bisa ditulis.
 try:
     import matplotlib.pyplot as plt
     HAS_MATPLOTLIB = True
-except ImportError:
+except Exception:
     HAS_MATPLOTLIB = False
 
 # Aman dari ModuleNotFoundError untuk Pillow (PIL)
@@ -39,33 +39,82 @@ except Exception:
 # =============================================================================
 # FITUR 1: MANUAL MATERIAL HANDLING (NIOSH, SNOOK, & BIOMEKANIKA L5/S1)
 # =============================================================================
-def hitung_niosh_lifting(h: float, v: float, d: float, a: float, f: float, c_type: str, berat_beban: float) -> dict:
-    """Menghitung RWL dan LI berdasarkan persamaan NIOSH 1991."""
+NIOSH_FREQUENCY_MULTIPLIERS = {
+    # F: (<=1 jam V<75, V>=75, 1-2 jam V<75, V>=75, 2-8 jam V<75, V>=75)
+    # CDC/NIOSH, Applications Manual for the Revised NIOSH Lifting Equation, Table 5.
+    0.2: (1.00, 1.00, 0.95, 0.95, 0.85, 0.85),
+    0.5: (0.97, 0.97, 0.92, 0.92, 0.81, 0.81),
+    1.0: (0.94, 0.94, 0.88, 0.88, 0.75, 0.75),
+    2.0: (0.91, 0.91, 0.84, 0.84, 0.65, 0.65),
+    3.0: (0.88, 0.88, 0.79, 0.79, 0.55, 0.55),
+    4.0: (0.84, 0.84, 0.72, 0.72, 0.45, 0.45),
+    5.0: (0.80, 0.80, 0.60, 0.60, 0.35, 0.35),
+    6.0: (0.75, 0.75, 0.50, 0.50, 0.27, 0.27),
+    7.0: (0.70, 0.70, 0.42, 0.42, 0.22, 0.22),
+    8.0: (0.60, 0.60, 0.35, 0.35, 0.18, 0.18),
+    9.0: (0.52, 0.52, 0.30, 0.30, 0.00, 0.15),
+    10.0: (0.45, 0.45, 0.26, 0.26, 0.00, 0.13),
+    11.0: (0.41, 0.41, 0.00, 0.23, 0.00, 0.00),
+    12.0: (0.37, 0.37, 0.00, 0.21, 0.00, 0.00),
+    13.0: (0.00, 0.34, 0.00, 0.00, 0.00, 0.00),
+    14.0: (0.00, 0.31, 0.00, 0.00, 0.00, 0.00),
+    15.0: (0.00, 0.28, 0.00, 0.00, 0.00, 0.00),
+}
+
+
+def _niosh_frequency_multiplier(f: float, v: float, durasi: str) -> float:
+    duration_index = {"≤ 1 jam": 0, "> 1–2 jam": 2, "> 2–8 jam": 4}
+    if durasi not in duration_index:
+        raise ValueError("Durasi angkat tidak dikenal.")
+    col = duration_index[durasi] + (1 if v >= 75 else 0)
+    frequency = max(0.2, float(f))
+    points = sorted(NIOSH_FREQUENCY_MULTIPLIERS)
+    if frequency > points[-1]:
+        return 0.0
+    for idx, upper in enumerate(points):
+        if frequency <= upper:
+            if idx == 0 or frequency == upper:
+                return NIOSH_FREQUENCY_MULTIPLIERS[upper][col]
+            lower = points[idx - 1]
+            low_fm = NIOSH_FREQUENCY_MULTIPLIERS[lower][col]
+            high_fm = NIOSH_FREQUENCY_MULTIPLIERS[upper][col]
+            return low_fm + (high_fm - low_fm) * (frequency - lower) / (upper - lower)
+    return 0.0
+
+
+def hitung_niosh_lifting(h: float, v: float, d: float, a: float, f: float, c_type: str, berat_beban: float,
+                        durasi: str = "≤ 1 jam") -> dict:
+    """RWL/LI untuk satu tugas angkat dua tangan menurut NIOSH RNLE."""
     lc = 23.0  # Load Constant (kg)
-    hm = min(1.0, max(0.0, 25.0 / h)) if h > 0 else 1.0
-    vm = max(0.0, 1.0 - (0.003 * abs(v - 75.0)))
-    dm = min(1.0, max(0.0, 0.82 + (4.5 / d))) if d >= 25 else 1.0
-    am = max(0.0, 1.0 - (0.0032 * a))
-
-    freq_map = {0.2: 1.00, 0.5: 0.97, 1.0: 0.94, 2.0: 0.91, 3.0: 0.88, 4.0: 0.84, 5.0: 0.80, 6.0: 0.75, 8.0: 0.60, 10.0: 0.45}
-    closest_f = min(freq_map.keys(), key=lambda k: abs(k - f))
-    fm = freq_map[closest_f]
-
-    cm_map = {"Baik (Good)": 1.00, "Sedang (Fair)": 0.95, "Buruk (Poor)": 0.90}
-    cm = cm_map.get(c_type, 0.95)
+    if not all(math.isfinite(float(x)) for x in (h, v, d, a, f, berat_beban)):
+        raise ValueError("Seluruh parameter NIOSH harus berupa angka yang valid.")
+    if min(h, f, berat_beban) <= 0 or v < 0 or d < 0 or a < 0:
+        raise ValueError("Parameter NIOSH tidak boleh negatif; beban, H, dan F harus positif.")
+    hm = 0.0 if h > 63 else min(1.0, 25.0 / h)
+    vm = 0.0 if v > 175 else max(0.0, 1.0 - (0.003 * abs(v - 75.0)))
+    dm = 0.0 if d > 175 else min(1.0, 0.82 + (4.5 / max(d, 25)))
+    am = 0.0 if a > 135 else max(0.0, 1.0 - (0.0032 * a))
+    fm = _niosh_frequency_multiplier(f, v, durasi)
+    cm_map = {"Baik (Good)": 1.00, "Sedang (Fair)": 1.00 if v >= 75 else 0.95, "Buruk (Poor)": 0.90}
+    if c_type not in cm_map:
+        raise ValueError("Jenis kualitas genggaman tidak dikenal.")
+    cm = cm_map[c_type]
 
     rwl = round(lc * hm * vm * dm * am * fm * cm, 2)
-    li = round(berat_beban / rwl, 2) if rwl > 0 else 0.0
+    li = round(berat_beban / rwl, 2) if rwl > 0 else None
 
-    if li <= 1.0:
-        kategori = "Level 1 - Aman (LI <= 1.0)"
-        rekomendasi = "Beban angkat aman bagi mayoritas pekerja sehat."
+    if li is None:
+        kategori = "Di luar batas RNLE (RWL = 0)"
+        rekomendasi = "Kondisi berada di luar rentang yang direkomendasikan persamaan. Redesign tugas angkat sebelum dinilai kembali."
+    elif li <= 1.0:
+        kategori = "LI <= 1 (lebih rendah risiko relatif)"
+        rekomendasi = "Evaluasi juga kondisi nyata, pekerja, dan tugas berulang; LI <= 1 bukan jaminan bebas cedera."
     elif li <= 3.0:
-        kategori = "Level 2 - Risiko Sedang (1.0 < LI <= 3.0)"
+        kategori = "LI > 1 (perlu perbaikan)"
         rekomendasi = "Perlu rekayasa stasiun kerja (dekatkan jarak H, sesuaikan tinggi V, atau kurangi beban)."
     else:
-        kategori = "Level 3 - Risiko Tinggi (LI > 3.0)"
-        rekomendasi = "Berbahaya bagi tulang belakang. Wajib gunakan alat bantu angkat mekanis (hoist/trolley)."
+        kategori = "LI > 3 (prioritas perbaikan tinggi)"
+        rekomendasi = "Risiko cedera punggung meningkat; prioritaskan redesign dan pertimbangkan alat bantu mekanis."
 
     return {
         "rwl": rwl,
@@ -74,11 +123,12 @@ def hitung_niosh_lifting(h: float, v: float, d: float, a: float, f: float, c_typ
         "am": round(am, 2), "fm": round(fm, 2), "cm": round(cm, 2),
         "kategori": kategori,
         "rekomendasi": rekomendasi,
+        "durasi": durasi,
     }
 
 
 def hitung_snook_table(jenis_aktivitas: str, jk: str, persentil: str, beban_aktual: float) -> dict:
-    """Estimasi batas beban maksimum (Maximum Acceptable Weight/Force) berdasarkan Snook & Ciriello."""
+    """Simulasi angka pembanding kelas; bukan implementasi tabel Snook & Ciriello."""
     base_limits = {
         ("Angkat (Lifting)", "Laki-laki"): {"P90": 14.0, "P75": 19.0, "P50": 24.0},
         ("Angkat (Lifting)", "Perempuan"): {"P90": 9.0, "P75": 12.0, "P50": 15.0},
@@ -88,12 +138,12 @@ def hitung_snook_table(jenis_aktivitas: str, jk: str, persentil: str, beban_aktu
         ("Tarik (Pulling)", "Perempuan"): {"P90": 13.0, "P75": 16.0, "P50": 20.0},
     }
     batas = base_limits.get((jenis_aktivitas, jk), {"P90": 12.0, "P75": 16.0, "P50": 20.0}).get(persentil, 15.0)
-    status = "Memenuhi Kriteria Snook" if beban_aktual <= batas else "Melebihi Batas Maksimum Snook"
+    status = "Di bawah contoh acuan" if beban_aktual <= batas else "Di atas contoh acuan"
     return {"batas_snook_kg": batas, "beban_aktual_kg": beban_aktual, "status": status}
 
 
 def hitung_biomekanika_l5s1(berat_badan: float, berat_beban: float, sudut_punggung: float, jarak_beban_cm: float) -> dict:
-    """Estimasi gaya tekan segmen L5/S1 (Batas aman NIOSH < 3400 N, MPL = 6400 N)."""
+    """Estimasi model statis sederhana; perbandingan 3400/6400 N bukan kepastian aman."""
     g = 9.81
     w_torso = 0.55 * berat_badan * g
     w_load = berat_beban * g
@@ -109,11 +159,11 @@ def hitung_biomekanika_l5s1(berat_badan: float, berat_beban: float, sudut_punggu
     f_comp = round(f_muscle + (w_torso * math.cos(rad)) + (w_load * math.cos(rad)), 1)
 
     if f_comp < 3400:
-        kategori = "Aman (< 3.400 N - Dibawah Batas BCD NIOSH)"
+        kategori = "Estimasi di bawah 3.400 N (bukan jaminan aman)"
     elif f_comp <= 6400:
-        kategori = "Perlu Perhatian (3.400 N - 6.400 N - Antara BCD & MPL)"
+        kategori = "Estimasi 3.400-6.400 N (perlu penilaian lanjut)"
     else:
-        kategori = "Berbahaya (> 6.400 N - Melampaui Maximum Permissible Limit)"
+        kategori = "Estimasi > 6.400 N (prioritas perbaikan tinggi)"
 
     return {"momen_nm": round(momen_total, 2), "f_kompresi_n": f_comp, "kategori": kategori}
 
@@ -250,7 +300,9 @@ def _hitung_sudut_3titik(a, b, c) -> float:
 
 
 def deteksi_postur_mediapipe(uploaded_file) -> dict:
-    """Menganalisis foto pekerja dengan proteksi penuh terhadap AttributeError di Cloud."""
+    """Hanya sarankan skor jika landmark pose manusia benar-benar terdeteksi."""
+    if not HAS_PIL:
+        raise RuntimeError("Pillow tidak tersedia untuk membaca gambar.")
     try:
         uploaded_file.seek(0)
     except Exception:
@@ -272,6 +324,11 @@ def deteksi_postur_mediapipe(uploaded_file) -> dict:
                 results = pose.process(img_np)
                 if results.pose_landmarks:
                     lm = results.pose_landmarks.landmark
+                    required = (mp_pose.PoseLandmark.RIGHT_EAR, mp_pose.PoseLandmark.RIGHT_SHOULDER,
+                                mp_pose.PoseLandmark.RIGHT_ELBOW, mp_pose.PoseLandmark.RIGHT_WRIST,
+                                mp_pose.PoseLandmark.RIGHT_HIP)
+                    if any(lm[j.value].visibility < 0.5 for j in required):
+                        return _pose_not_available(img_np, "Sendi tubuh tidak terlihat jelas")
                     ear = [lm[mp_pose.PoseLandmark.RIGHT_EAR.value].x, lm[mp_pose.PoseLandmark.RIGHT_EAR.value].y]
                     shoulder = [lm[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x, lm[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
                     elbow = [lm[mp_pose.PoseLandmark.RIGHT_ELBOW.value].x, lm[mp_pose.PoseLandmark.RIGHT_ELBOW.value].y]
@@ -291,22 +348,16 @@ def deteksi_postur_mediapipe(uploaded_file) -> dict:
                         annotated, "MediaPipe AI Pose (Sendi Terdeteksi)"
                     )
                 else:
-                    return _konversi_sudut_ke_skor(
-                        45.0, 80.0, 18.0, 28.0,
-                        img_np, "Objek Manusia Tidak Terdeteksi (Menggunakan Estimasi Standar)"
-                    )
+                    return _pose_not_available(img_np, "Manusia tidak terdeteksi")
         except Exception:
-            pass
+            return _pose_not_available(img_np, "Analisis pose gagal pada server")
 
-    # Fallback Analisis Geometri Citra jika MediaPipe tidak mendukung environment Cloud
-    h, w, _ = img_np.shape
-    aspect = h / max(w, 1)
-    est_trunk = round(min(65.0, max(10.0, 32.0 / max(aspect, 0.5))), 1)
-    est_ua = round(min(95.0, max(20.0, 42.0 * aspect)), 1)
-    return _konversi_sudut_ke_skor(
-        est_ua, 82.0, 22.0, est_trunk,
-        img_np, "Mode Estimasi Geometri Citra (Cloud Safe)"
-    )
+    return _pose_not_available(img_np, "MediaPipe tidak tersedia di server")
+
+
+def _pose_not_available(img_np, reason: str) -> dict:
+    return {"mode": reason, "annotated_image": img_np, "sudut": {},
+            "skor_rekomendasi": None, "valid_detection": False}
 
 
 def _konversi_sudut_ke_skor(ua_deg: float, la_deg: float, nk_deg: float, tr_deg: float, annotated_img, mode: str) -> dict:
@@ -317,6 +368,7 @@ def _konversi_sudut_ke_skor(ua_deg: float, la_deg: float, nk_deg: float, tr_deg:
 
     return {
         "mode": mode,
+        "valid_detection": True,
         "annotated_image": annotated_img,
         "sudut": {
             "Lengan Atas (°)": ua_deg,
@@ -346,94 +398,98 @@ def _clean_pdf_text(text: str) -> str:
 
 
 def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
-    """Menghasilkan dokumen Berita Acara & Laporan Praktikum Ergonomi dalam format PDF."""
-    id_info = session_state["identitas"]
-
+    """Laporan PDF ringkas tetapi mencakup Modul 01-09 tanpa teks terpotong."""
     if not HAS_FPDF:
-        return b"Silakan instal library fpdf2 (pip install fpdf2) untuk mengunduh PDF."
+        raise RuntimeError("Paket fpdf2 tidak tersedia untuk membuat laporan PDF.")
 
+    identitas = session_state.get("identitas", {})
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=17)
+    pdf.set_margins(13, 14, 13)
     pdf.add_page()
 
-    # Kop Laporan
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 8, _clean_pdf_text(id_info.get("universitas", "UNIVERSITAS PELITA BANGSA")).upper(), ln=True, align="C")
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 6, _clean_pdf_text(f"LABORATORIUM ERGONOMI & PERANCANGAN SISTEM KERJA - {id_info.get('prodi', 'TEKNIK INDUSTRI').upper()}"), ln=True, align="C")
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 5, _clean_pdf_text(f"Kelas: {id_info.get('kelas', '-')} | Kelompok: {id_info.get('kelompok', '-')} | Tanggal: {id_info.get('tanggal', '-')}"), ln=True, align="C")
-    pdf.ln(4)
-    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-    pdf.ln(5)
+    def line(value):
+        pdf.set_font("Helvetica", "", 8.5)
+        pdf.multi_cell(0, 5, _clean_pdf_text(value))
 
-    # 1. Identitas & Anggota
+    def section(title):
+        if pdf.get_y() > 266:
+            pdf.add_page()
+        pdf.ln(3)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_fill_color(231, 243, 234)
+        pdf.multi_cell(0, 7, _clean_pdf_text(title), fill=True)
+        pdf.ln(1)
+
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.multi_cell(0, 7, _clean_pdf_text(identitas.get("universitas", "UNIVERSITAS PELITA BANGSA")).upper(), align="C")
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 6, "A. IDENTITAS KELOMPOK & OPERATOR", ln=True)
+    pdf.multi_cell(0, 6, "LAPORAN PRAKTIKUM ERGONOMI - TEKNIK INDUSTRI", align="C")
     pdf.set_font("Helvetica", "", 9)
     pdf.multi_cell(0, 5, _clean_pdf_text(
-        f"Dosen / Asisten: {id_info.get('dosen', '-')}\n"
-        f"Operator 1: {id_info.get('op1_nama')} ({id_info.get('op1_usia')} th, {id_info.get('op1_jk')})\n"
-        f"Operator 2: {id_info.get('op2_nama')} ({id_info.get('op2_usia')} th, {id_info.get('op2_jk')})\n"
-        f"Anggota Kelompok:\n{id_info.get('anggota', '-')}"
-    ))
-    pdf.ln(3)
+        f"Kelas: {identitas.get('kelas', '-')} | Kelompok: {identitas.get('kelompok', '-')} | "
+        f"Tanggal: {identitas.get('tanggal', '-')}"), align="C")
 
-    # 2. Ringkasan Modul 01 (%CVL)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 6, "B. HASIL MODUL 01 - FISIOLOGI KERJA (%CVL)", ln=True)
-    pdf.set_font("Helvetica", "", 8.5)
+    section("A. IDENTITAS KELOMPOK DAN OPERATOR")
+    for field, label in (("dosen", "Dosen/Asisten"), ("op1_nama", "Operator 1"),
+                         ("op2_nama", "Operator 2"), ("anggota", "Anggota kelompok")):
+        line(f"{label}: {identitas.get(field, '-')}")
+
+    section("B. MODUL 01 - FISIOLOGI KERJA")
     for r in calc_results.get("m1_rows", []):
-        pdf.cell(0, 5, _clean_pdf_text(f"- {r[0]} ({r[1]}): DN Kerja={r[4]} bpm, %CVL={r[6]}%, Energi={r[7]} kkal/mnt -> {r[8]}"), ln=True)
-    pdf.ln(3)
+        line(f"- {r[0]} ({r[1]}): DN kerja {r[4]} bpm, %CVL {r[6]}%, "
+             f"energi {r[7]} kkal/menit. {r[8]}")
 
-    # 3. Ringkasan Modul 02 (RULA, OWAS, REBA)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 6, "C. HASIL MODUL 02 - EVALUASI POSTUR (RULA, OWAS, REBA)", ln=True)
-    pdf.set_font("Helvetica", "", 8.5)
+    section("C. MODUL 02 - PENILAIAN POSTUR")
     for r in calc_results.get("m2_rows", []):
-        pdf.cell(0, 5, _clean_pdf_text(f"- {r[0]} | {r[1]} [{r[2]}]: {r[3]} ({r[4]}) -> {r[5]}"), ln=True)
-    pdf.ln(3)
+        line(f"- {r[0]} / {r[1]} [{r[2]}]: {r[3]}; {r[4]}; {r[5]}")
 
-    # 4. Ringkasan Modul 03 (Waktu Baku)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 6, "D. HASIL MODUL 03 - PENGUKURAN WAKTU KERJA", ln=True)
-    pdf.set_font("Helvetica", "", 8.5)
-    total_wb = sum(r[12] for r in calc_results.get("m3_rows", []))
-    pdf.cell(0, 5, _clean_pdf_text(f"Total Waktu Baku Siklus (Sigma Wb): {total_wb:.2f} detik/unit (Output Standar: {3600/total_wb:.1f} unit/jam)" if total_wb > 0 else "-"), ln=True)
-    for r in calc_results.get("m3_rows", []):
-        pdf.cell(0, 5, _clean_pdf_text(f"  [{r[0]}] {r[1]}: Ws={r[2]}s | Wn={r[11]}s | Wb={r[12]}s | {r[6]} & {r[8]}"), ln=True)
-    pdf.ln(3)
+    section("D. MODUL 03 - PENGUKURAN WAKTU KERJA")
+    m3_rows = calc_results.get("m3_rows", [])
+    total_wb = sum(r[12] for r in m3_rows)
+    line(f"Total waktu baku: {total_wb:.2f} detik/unit" +
+         (f"; output standar {3600 / total_wb:.1f} unit/jam" if total_wb > 0 else "; belum ada data valid"))
+    for r in m3_rows:
+        line(f"- {r[0]} {r[1]}: Ws={r[2]} dtk, Wn={r[11]} dtk, Wb={r[12]} dtk; "
+             f"keseragaman={r[6]}; kecukupan={r[8]}")
 
-    # 5. Ringkasan Modul 05 & 09 (Antropometri & MMH NIOSH)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 6, "E. RANCANGAN STASIUN KERJA & MANUAL MATERIAL HANDLING (NIOSH)", ln=True)
-    pdf.set_font("Helvetica", "", 8.5)
+    section("E. MODUL 04 - ANTROPOMETRI 32 DIMENSI")
+    for r in calc_results.get("m4_rows", []):
+        line(f"- {r[0]} {r[1]}: mean {r[2]} cm, SD {r[3]} cm, "
+             f"P5 {r[4]} cm, P50 {r[6]} cm, P95 {r[8]} cm. {r[9]}")
+
+    section("F. MODUL 05 - RANCANGAN STASIUN KERJA")
     for r in calc_results.get("m5_rows", []):
-        pdf.cell(0, 5, _clean_pdf_text(f"- {r[0]} ({r[8]}): Mean={r[1]} cm -> Ukuran Rancangan Final = {r[9]} cm"), ln=True)
-    if "m9_summary" in calc_results:
-        m9s = calc_results["m9_summary"]
-        pdf.cell(0, 5, _clean_pdf_text(f"- Evaluasi NIOSH: RWL = {m9s['rwl']} kg | Lifting Index (LI) = {m9s['li']} ({m9s['kategori']})"), ln=True)
-        pdf.cell(0, 5, _clean_pdf_text(f"- Biomekanika L5/S1: Gaya Kompresi = {m9s['f_kompresi_n']} N ({m9s['status_l5s1']})"), ln=True)
-    pdf.ln(3)
+        line(f"- {r[0]}: mean {r[1]} cm, acuan {r[8]}, rancangan {r[9]} cm; "
+             f"keseragaman={r[5]}, kecukupan={r[7]}")
 
-    # 6. Evaluasi Lingkungan (Modul 06-08)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 6, "F. EVALUASI LINGKUNGAN FISIK KERJA (TEMPERATUR, KEBISINGAN, PENCAHAYAAN)", ln=True)
-    pdf.set_font("Helvetica", "", 8.5)
+    section("G. MODUL 06-08 - LINGKUNGAN KERJA")
     for r in calc_results.get("env_rows", []):
-        pdf.cell(0, 5, _clean_pdf_text(f"- {r[0]}: Kondisi 1={r[2]}, Kondisi 2={r[3]} (NAB: {r[5]}) | p-val={r[6]} ({r[7]})"), ln=True)
-    pdf.ln(8)
+        line(f"- {r[0]} ({r[1]}): kondisi 1={r[2]}, kondisi 2={r[3]}, "
+             f"acuan praktikum={r[5]}, p={r[6]}; {r[7]}")
+    line("Catatan: suhu udara biasa bukan indeks ISBB; pembacaan dBA sesaat bukan dosis pajanan 8 jam.")
 
-    # Lembar Pengesahan Asisten Lab
-    pdf.set_font("Helvetica", "B", 9.5)
-    pdf.cell(95, 6, "Mengetahui, Dosen / Asisten Laboratorium", align="C")
-    pdf.cell(95, 6, "Ketua Kelompok Praktikan", ln=True, align="C")
-    pdf.ln(16)
+    section("H. MODUL 09 - MANUAL MATERIAL HANDLING")
+    summary = calc_results.get("m9_summary", {})
+    if summary:
+        line(f"NIOSH: RWL={summary.get('rwl')} kg; LI={summary.get('li') if summary.get('li') is not None else 'tidak terdefinisi'}; "
+             f"{summary.get('kategori', '-')}.")
+        line(f"Estimasi biomekanika L5/S1: {summary.get('f_kompresi_n')} N; "
+             f"{summary.get('status_l5s1', '-')}.")
+        line("Perhitungan Snook pada aplikasi hanya simulasi edukatif dan bukan batas resmi Liberty Mutual.")
+
+    # Pastikan tanda tangan tidak terpotong atau terpisah pada pergantian halaman.
+    if pdf.get_y() > 251:
+        pdf.add_page()
+    pdf.ln(7)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(90, 6, "Dosen / Asisten Laboratorium", align="C")
+    pdf.cell(90, 6, "Ketua Kelompok", ln=True, align="C")
+    pdf.ln(13)
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(95, 6, _clean_pdf_text(f"( {id_info.get('dosen', '_______________________')} )"), align="C")
-    pdf.cell(95, 6, _clean_pdf_text(f"( {id_info.get('kelompok', '_______________________')} )"), ln=True, align="C")
-
+    pdf.multi_cell(0, 5, _clean_pdf_text(
+        f"Dosen/Asisten: {identitas.get('dosen', '-')}    |    "
+        f"Kelompok: {identitas.get('kelompok', '-')}"), align="C")
     return bytes(pdf.output())
 
 
@@ -462,26 +518,47 @@ def init_antropometri_db():
 
 
 def simpan_ke_database_antropometri(kelas: str, kelompok: str, df_32_rows: list) -> int:
-    """Menyimpan seluruh sampel 32 dimensi dari kelompok aktif ke SQLite bersama."""
+    """Ganti data kelompok yang sama secara atomik agar klik berulang tidak menggandakan populasi."""
+    kelas, kelompok = str(kelas).strip(), str(kelompok).strip()
+    if not kelas or not kelompok:
+        raise ValueError("Kelas dan kelompok wajib diisi sebelum menyimpan.")
+    if not isinstance(df_32_rows, list):
+        raise ValueError("Data antropometri harus berupa daftar baris.")
+
+    records = []
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for row in df_32_rows:
+        kode = str(row.get("Kode", "")).strip()
+        nama = str(row.get("Dimensi Tubuh", "")).strip()
+        if not kode or not nama:
+            continue
+        for i in range(1, 11):
+            raw = row.get(f"P{i}", None)
+            if raw is None or str(raw).strip() == "":
+                continue
+            try:
+                val = float(raw)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Nilai {kode} P{i} bukan angka.") from exc
+            if not math.isfinite(val) or val < 0:
+                raise ValueError(f"Nilai {kode} P{i} tidak valid.")
+            if val > 0:
+                records.append((now_str, kelas, kelompok, kode, nama, val))
+    if not records:
+        raise ValueError("Tidak ada sampel pengukuran positif yang dapat disimpan.")
+
     init_antropometri_db()
     conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    inserted = 0
-    for row in df_32_rows:
-        kode = row.get("Kode", "")
-        nama = row.get("Dimensi Tubuh", "")
-        for i in range(1, 11):
-            val = float(row.get(f"P{i}", 0.0))
-            if val > 0:
-                cur.execute(
-                    "INSERT INTO sampel_antropometri (waktu_simpan, kelas, kelompok, kode_dimensi, nama_dimensi, nilai_cm) VALUES (?, ?, ?, ?, ?, ?)",
-                    (now_str, kelas, kelompok, kode, nama, val),
-                )
-                inserted += 1
-    conn.commit()
-    conn.close()
-    return inserted
+    try:
+        with conn:
+            conn.execute("DELETE FROM sampel_antropometri WHERE kelas=? AND kelompok=?", (kelas, kelompok))
+            conn.executemany(
+                "INSERT INTO sampel_antropometri (waktu_simpan, kelas, kelompok, kode_dimensi, nama_dimensi, nilai_cm) "
+                "VALUES (?, ?, ?, ?, ?, ?)", records
+            )
+    finally:
+        conn.close()
+    return len(records)
 
 
 def ambil_rekap_database_populasi() -> pd.DataFrame:
