@@ -483,6 +483,13 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
              f"{summary.get('status_l5s1', '-')}.")
         line("Perhitungan Snook pada aplikasi hanya simulasi edukatif dan bukan batas resmi Liberty Mutual.")
 
+    section("I. ANALISIS DAN PEMBAHASAN PRAKTIKAN")
+    for nomor in range(1, 10):
+        modul = f"Modul {nomor:02d}"
+        pembahasan = session_state.get("analisis_modul", {}).get(modul, "")
+        if str(pembahasan).strip():
+            line(f"{modul}: {pembahasan}")
+
     # Pastikan tanda tangan tidak terpotong atau terpisah pada pergantian halaman.
     if pdf.get_y() > 251:
         pdf.add_page()
