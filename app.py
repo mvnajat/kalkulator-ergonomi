@@ -18,6 +18,7 @@ from utils.calculations import (
     hitung_lingkungan_perbandingan,
 )
 from utils.exporter import export_session_to_json, export_session_to_excel
+from utils.table_editor import prepare_editor_scope, edit_table_rows
 from utils.advanced_features import (
     hitung_niosh_lifting,
     hitung_snook_table,
@@ -584,6 +585,11 @@ for idx, label in enumerate(nav_options):
             st.session_state["nav_page"] = label
             st.rerun()
 
+# A table's source must remain unchanged during cell edits. When the user
+# leaves the worksheet, its next visit will use the last saved values.
+if st.session_state["nav_page"] != "Modul Praktikum":
+    prepare_editor_scope(st.session_state, st.session_state["nav_page"])
+
 st.markdown(f"""
 <div class="hero-card">
     <div class="hero-subtitle">{st.session_state['identitas']['universitas']} · {st.session_state['identitas']['prodi']} ({st.session_state['identitas']['kelas']})</div>
@@ -730,6 +736,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
     default_idx = modul_list.index(st.session_state["selected_modul"]) if st.session_state["selected_modul"] in modul_list else 0
     chosen = st.selectbox("Pilih Lembar Kerja Modul Praktikum:", modul_list, index=default_idx)
     st.session_state["selected_modul"] = chosen
+    prepare_editor_scope(st.session_state, f"Modul Praktikum:{chosen}")
     st.divider()
 
     # --- MODUL 01: FISIOLOGI ---
@@ -867,8 +874,10 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         m3 = st.session_state["modul_03"]
 
         st.markdown("##### 1. Tabel Waktu Siklus Pengamatan (10 Siklus dalam Detik)")
-        edited_m3 = st.data_editor(pd.DataFrame(m3["df_siklus"]), use_container_width=True, num_rows="dynamic", key="ed_m3")
-        m3["df_siklus"] = edited_m3.to_dict("records")
+        m3["df_siklus"] = edit_table_rows(
+            st.session_state, m3["df_siklus"], "ed_m3", st.data_editor,
+            use_container_width=True, num_rows="dynamic",
+        )
 
         st.markdown("##### 2. Penyesuaian (Westinghouse Rating) & Kelonggaran (Allowance)")
         w1, w2, w3, w4 = st.columns(4)
@@ -907,8 +916,10 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
     elif chosen == "Modul 04 - Antropometri 32 Dimensi":
         st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Kurva Gaussian & Database Populasi")
         m4 = st.session_state["modul_04"]
-        edited_m4 = st.data_editor(pd.DataFrame(m4["df_32"]), use_container_width=True, height=380, key="ed_m4")
-        m4["df_32"] = edited_m4.to_dict("records")
+        m4["df_32"] = edit_table_rows(
+            st.session_state, m4["df_32"], "ed_m4", st.data_editor,
+            use_container_width=True, height=380,
+        )
 
         calc_all = compile_all_calculations()
         df_res_m4 = pd.DataFrame(calc_all["m4_rows"], columns=[
@@ -958,8 +969,10 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
     elif chosen == "Modul 05 - Antropometri Lanjutan":
         st.subheader("🪑 Modul 05: Antropometri Lanjutan & Blueprint 2D Stasiun Kerja")
         m5 = st.session_state["modul_05"]
-        edited_m5 = st.data_editor(pd.DataFrame(m5["df_3dim"]), use_container_width=True, num_rows="dynamic", key="ed_m5")
-        m5["df_3dim"] = edited_m5.to_dict("records")
+        m5["df_3dim"] = edit_table_rows(
+            st.session_state, m5["df_3dim"], "ed_m5", st.data_editor,
+            use_container_width=True, num_rows="dynamic",
+        )
 
         calc_all = compile_all_calculations()
         df_res_m5 = pd.DataFrame(calc_all["m5_rows"], columns=[
