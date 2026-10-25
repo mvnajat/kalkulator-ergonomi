@@ -410,6 +410,7 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
 
     def line(value):
         pdf.set_font("Helvetica", "", 8.5)
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(0, 5, _clean_pdf_text(value))
 
     def section(title):
@@ -418,13 +419,16 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
         pdf.ln(3)
         pdf.set_font("Helvetica", "B", 10)
         pdf.set_fill_color(231, 243, 234)
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(0, 7, _clean_pdf_text(title), fill=True)
         pdf.ln(1)
 
     pdf.set_font("Helvetica", "B", 13)
     pdf.multi_cell(0, 7, _clean_pdf_text(identitas.get("universitas", "UNIVERSITAS PELITA BANGSA")).upper(), align="C")
+    pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", "B", 10)
     pdf.multi_cell(0, 6, "LAPORAN PRAKTIKUM ERGONOMI - TEKNIK INDUSTRI", align="C")
+    pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", "", 9)
     pdf.multi_cell(0, 5, _clean_pdf_text(
         f"Kelas: {identitas.get('kelas', '-')} | Kelompok: {identitas.get('kelompok', '-')} | "
@@ -487,6 +491,7 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
     pdf.cell(90, 6, "Ketua Kelompok", ln=True, align="C")
     pdf.ln(13)
     pdf.set_font("Helvetica", "", 9)
+    pdf.set_x(pdf.l_margin)
     pdf.multi_cell(0, 5, _clean_pdf_text(
         f"Dosen/Asisten: {identitas.get('dosen', '-')}    |    "
         f"Kelompok: {identitas.get('kelompok', '-')}"), align="C")
