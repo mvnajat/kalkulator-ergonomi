@@ -12,6 +12,36 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Workspace Praktikum — roadmap pengembangan berikutnya
+
+- **Manajer Proyek** (`/proyek`): beri nama proyek, simpan beberapa snapshot selama sesi, ekspor file proyek `.json`, kemudian impor kembali beserta status penyelesaian modul. Berkas proyek bersifat portabel, bukan terikat satu perangkat.
+- **Cloud proyek pribadi (opsional)**: bila pengelola telah menyiapkan autentikasi OIDC dan PostgreSQL SSL, praktikan bisa menyimpan/membuka proyek sesuai identitas akun (`sub`) dan memilih **autosave**. Aplikasi tidak menyimpan proyek pribadi ke SQLite bersama. Tanpa pengaturan cloud, gunakan file proyek `.json`; snapshot sesi *tidak permanen* setelah refresh.
+- **Dashboard kemajuan** (`/dashboard`): progres 9 modul, tanda selesai yang dikonfirmasi praktikan, dan ringkasan hitung. Data simulasi bawaan tidak otomatis diberi label selesai.
+- **Impor Excel** (`/impor-excel`): template `.xlsx` dan validasi atomik untuk Modul **03–08** (waktu siklus, 32 dimensi, desain antropometri, suhu, dBA, lux). Kolom, batas nilai, rumus Excel, nilai tak hingga, dan data kosong dicek sebelum mengganti data aktif.
+- **Ruang Belajar** (`/ruang-belajar`): teori ringkas, contoh hitung berdasarkan data sesi, batas metode, dan latihan untuk semua 9 modul. Tiap halaman modul juga menampilkan penelusuran hasil yang sama.
+- **PDF per modul**: di halaman Laporan, unduh PDF khusus modul berisi identitas, ringkasan metode, penelusuran rumus, hasil, dan pembahasan. Laporan gabungan PDF/Excel/JSON tetap tersedia.
+- **Simulasi postur RULA**: selain simulasi NIOSH pada Modul 09, Modul 02 kini mendukung perbandingan skor awal dan skor usulan tanpa menimpa observasi.
+- **Peningkatan responsivitas HP** pada kartu dashboard, area impor, dan tabel.
+
+#### Cara mengaktifkan penyimpanan cloud (khusus pengelola aplikasi)
+
+Penyimpanan **tidak** menjadi permanen hanya karena aplikasi terhubung ke Streamlit Community Cloud. Siapkan PostgreSQL privat dan konfigurasi OIDC sesuai [panduan resmi Streamlit](https://docs.streamlit.io/develop/concepts/connections/authentication). Simpan nilai rahasia di Streamlit Cloud Secrets (jangan commit ke GitHub):
+
+```toml
+PROJECT_DATABASE_URL = "postgresql://USER:PASSWORD@DB_HOST:5432/DB_NAME"
+
+[auth]
+redirect_uri = "https://kalkulator-ergonomi.streamlit.app/oauth2callback"
+cookie_secret = "PAKAI_NILAI_ACAK_RAHASIA"
+client_id = "CLIENT_ID_DARI_PENYEDIA_OIDC"
+client_secret = "CLIENT_SECRET_DARI_PENYEDIA_OIDC"
+server_metadata_url = "URL_METADATA_OIDC_DARI_PENYEDIA"
+```
+
+Kolom `[auth]` hanya contoh bentuk konfigurasi: URI pengalihan dan metadata harus mengikuti penyedia OIDC yang benar-benar didaftarkan oleh pengelola. Jangan memakai nilai contoh di atas. Database harus membatasi akses melalui kredensial rahasia, mengaktifkan SSL, dan disertai kebijakan backup. Setelah itu masuk melalui `/proyek` dan aktifkan autosave secara sadar. Tidak ada login ataupun database eksternal yang otomatis dibuat oleh repository ini.
+
+File `.json` cadangan maupun `.xlsx` bisa memuat identitas anggota kelompok; simpan dan bagikan dengan hati-hati. Template Excel memuat data contoh yang **wajib diganti** sebelum membuat analisis atas observasi nyata. Perhitungan RULA, uji-t, ISBB, dan dosis kebisingan memerlukan validasi konteks lapangan, bukan sekadar hasil numerik aplikasi.
+
 - **Navigasi multipage:** 9 modul kini memiliki halaman dan URL sendiri (`/modul-01` sampai `/modul-09`). Tombol **Daftar Modul**, **Sebelumnya**, dan **Berikutnya** serta tombol Back/Forward browser memudahkan berpindah halaman.
 - **Modul lingkungan dipisahkan:** Modul 06 (Temperatur), 07 (Kebisingan), dan 08 (Pencahayaan) kini memiliki input, hasil, peringatan, dan analisis masing-masing. Semua nilai tetap ikut di ekspor PDF/Excel/JSON.
 - **Simulasi perbaikan Manual Material Handling (Modul 09):** bandingkan kondisi awal dengan usulan jarak horizontal, tinggi tangan, perpindahan vertikal, sudut, frekuensi, durasi, genggaman, dan berat beban. RWL serta Lifting Index dihitung untuk kedua skenario tanpa mengganti data observasi utama.

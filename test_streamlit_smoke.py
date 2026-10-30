@@ -7,6 +7,23 @@ from pathlib import Path
 
 @unittest.skipUnless(importlib.util.find_spec("streamlit"), "Streamlit belum terinstal")
 class StreamlitSmokeTests(unittest.TestCase):
+    def test_new_workspace_pages_render_without_exception(self):
+        from streamlit.testing.v1 import AppTest
+
+        pages = {
+            "dashboard": "Dashboard Kemajuan",
+            "proyek": "Proyek Praktikum",
+            "impor-excel": "Impor Excel",
+            "ruang-belajar": "Ruang Belajar",
+        }
+        for slug, page_title in pages.items():
+            with self.subTest(page=slug):
+                app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
+                app.button(key=f"home_tool_{slug}").click().run()
+                self.assertFalse(app.exception)
+                self.assertEqual(app.session_state["_active_page_slug"], slug)
+                self.assertEqual(app.session_state["nav_page"], page_title)
+
     def test_every_module_page_opens_without_exception(self):
         from streamlit.testing.v1 import AppTest
 
