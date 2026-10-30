@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+from html import escape
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import numpy as np
@@ -21,6 +22,7 @@ from utils.exporter import export_session_to_json, export_session_to_excel, rest
 from utils.table_editor import prepare_editor_scope, edit_table_rows
 from utils.advanced_features import (
     hitung_niosh_lifting,
+    bandingkan_skenario_niosh,
     hitung_snook_table,
     hitung_biomekanika_l5s1,
     buat_plot_kurva_normal,
@@ -224,6 +226,36 @@ st.markdown("""
         background-color: #f1f5f9;
         border-color: #15803d;
         color: #15803d;
+    }
+    div.stButton > button:focus-visible,
+    div.stDownloadButton > button:focus-visible {
+        outline: 3px solid #34d399;
+        outline-offset: 3px;
+    }
+    [data-testid="stMetric"] {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 16px;
+    }
+    [data-testid="stDataFrame"] {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    @media (max-width: 850px) {
+        .block-container {
+            padding-top: 4rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+        .upb-top-left-fixed { left: 10px; top: 10px; padding: 5px 9px; }
+        .upb-brand-title { font-size: 0.67rem; }
+        .hero-card { padding: 18px 16px; margin-top: 12px; }
+        .hero-title { font-size: 1.3rem; line-height: 1.3; }
+        .hero-desc { font-size: 0.85rem; }
+        .panel-card, .module-card { padding: 15px 14px; }
+        .mod-desc { min-height: 0; }
+        div.stButton > button { min-height: 44px; height: auto; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -440,6 +472,14 @@ def init_session_state():
         "sudut_punggung": 35.0,
     }
 
+    # Skenario usulan terpisah dari data observasi, supaya simulasi tidak
+    # mengubah input asli atau hasil laporan tanpa sepengetahuan pengguna.
+    st.session_state["modul_09_simulasi"] = {
+        "h_cm": 25.0, "v_cm": 75.0, "d_cm": 45.0, "a_deg": 0.0,
+        "f_lift": 1.0, "durasi_angkat": "≤ 1 jam",
+        "coupling": "Baik (Good)", "berat_beban": 12.0,
+    }
+
     st.session_state["analisis_modul"] = {
         "Modul 01": "Tinjau hasil %CVL tiap operator dan sesuaikan rekomendasi dengan hasil perhitungan aktual.",
         "Modul 02": "Bandingkan skor RULA, OWAS, dan REBA pada tiap aktivitas; periksa kondisi postur saat observasi.",
@@ -552,6 +592,8 @@ def compile_all_calculations() -> dict:
         "f_kompresi_n": res_bio["f_kompresi_n"],
         "status_l5s1": res_bio["kategori"],
     }
+    simulasi = st.session_state.get("modul_09_simulasi")
+    sim_summary = bandingkan_skenario_niosh(m9, simulasi) if simulasi else None
 
     return {
         "m1_rows": m1_list,
@@ -561,6 +603,7 @@ def compile_all_calculations() -> dict:
         "m5_rows": m5_list,
         "env_rows": env_list,
         "m9_summary": m9_summary,
+        "m9_simulasi_summary": sim_summary,
     }
 
 
@@ -568,6 +611,11 @@ def compile_all_calculations() -> dict:
 # 4. LOGO & NAMA UNIVERSITAS DI POJOK KIRI ATAS LAYAR + BAR MENU NAVIGASI
 # -----------------------------------------------------------------------------
 logo_tag = get_logo_html()
+identitas_hero = st.session_state["identitas"]
+hero_identitas = " · ".join((
+    escape(str(identitas_hero["universitas"])),
+    f"{escape(str(identitas_hero['prodi']))} ({escape(str(identitas_hero['kelas']))})",
+))
 st.markdown(f"""
 <div class="upb-top-left-fixed">
     {logo_tag}
@@ -593,7 +641,7 @@ if st.session_state["nav_page"] != "Modul Praktikum":
 
 st.markdown(f"""
 <div class="hero-card">
-    <div class="hero-subtitle">{st.session_state['identitas']['universitas']} · {st.session_state['identitas']['prodi']} ({st.session_state['identitas']['kelas']})</div>
+    <div class="hero-subtitle">{hero_identitas}</div>
     <div class="hero-title">Ruang Praktikum Ergonomi & Perancangan Sistem Kerja</div>
     <p class="hero-desc">Dilengkapi Evaluasi Fisiologi, RULA/OWAS/REBA + AI Pose Estimation, Time Study, Antropometri + CAD 2D & Database Populasi, Lingkungan Fisik, MMH (NIOSH/Snook/L5-S1), serta Ekspor PDF & Excel.</p>
 </div>
@@ -618,7 +666,7 @@ if st.session_state["nav_page"] == "Beranda":
                 <div class="summary-sub">Waktu Server Lokal (Asia/Jakarta)</div>
             </div>
             <div class="summary-item">
-                <div class="summary-val">9 Modul Praktikum Terintegrasi</div>
+            <div class="summary-val">9 Modul Praktikum Terintegrasi</div>
                 <div class="summary-sub">Termasuk MMH (NIOSH, Snook, Biomekanika L5/S1) & CAD 2D</div>
             </div>
             <div class="summary-item">
@@ -632,12 +680,13 @@ if st.session_state["nav_page"] == "Beranda":
         </div>
 
         <div class="emerald-notice">
-            <strong>🚀 5 Fitur Pengembangan Aktif:</strong><br>
+            <strong>🚀 Fitur Pengembangan Aktif:</strong><br>
             1. <b>MMH & Biomekanika</b> (NIOSH RWL/LI, Snook, L5/S1)<br>
             2. <b>Visualisasi CAD 2D & Kurva Normal</b><br>
             3. <b>AI Pose Estimation</b> pada foto postur kerja<br>
             4. <b>Generator Laporan PDF</b> siap cetak<br>
-            5. <b>Database SQLite Sementara</b> & Indikator Lingkungan K3
+            5. <b>Database SQLite Sementara</b> & Indikator Lingkungan K3<br>
+            6. <b>Simulasi Sebelum–Sesudah</b> pengendalian angkat berdasarkan NIOSH
         </div>
         """, unsafe_allow_html=True)
 
@@ -1069,7 +1118,10 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.subheader("📦 Modul 09: Manual Material Handling (NIOSH Equation, Snook Tables & Biomekanika L5/S1)", anchor="modul-09-mmh")
         m9 = st.session_state["modul_09"]
 
-        tab_n, tab_s, tab_b = st.tabs(["1️⃣ NIOSH Lifting Equation (RWL & LI)", "2️⃣ Snook & Ciriello Tables", "3️⃣ Biomekanika Segmen L5/S1"])
+        tab_n, tab_s, tab_b, tab_sim = st.tabs([
+            "1️⃣ NIOSH (RWL & LI)", "2️⃣ Snook & Ciriello", "3️⃣ Biomekanika L5/S1",
+            "4️⃣ Simulasi Perbaikan",
+        ])
 
         with tab_n:
             c1, c2, c3 = st.columns(3)
@@ -1151,6 +1203,90 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             bm1.metric("Momen Gaya pada L5/S1", f"{res_b['momen_nm']} Nm")
             bm2.metric("Estimasi Kompresi L5/S1", f"{res_b['f_kompresi_n']} N", res_b["kategori"])
             st.caption("Model biomekanika dua dimensi yang disederhanakan; tidak menggantikan analisis dinamis atau pemeriksaan K3 profesional.")
+
+        with tab_sim:
+            st.markdown("#### Bandingkan kondisi angkat saat ini dengan usulan perbaikan")
+            st.caption(
+                "Ubah jarak beban, tinggi tangan, frekuensi, atau berat beban untuk melihat "
+                "bagaimana RWL dan LI berubah. Skenario ini tidak mengubah data pengamatan utama."
+            )
+            sim = st.session_state.setdefault("modul_09_simulasi", {
+                "h_cm": 25.0, "v_cm": 75.0, "d_cm": 45.0, "a_deg": 0.0,
+                "f_lift": 1.0, "durasi_angkat": "≤ 1 jam",
+                "coupling": "Baik (Good)", "berat_beban": 12.0,
+            })
+            for field, saved in sim.items():
+                st.session_state.setdefault(f"_ui_sim_{field}", saved)
+
+            with st.container(border=True):
+                st.markdown("**Parameter usulan (skenario latihan)**")
+                sc1, sc2 = st.columns(2)
+                with sc1:
+                    sim["h_cm"] = st.number_input("Usulan H — jarak horizontal (cm)", min_value=15.0,
+                        max_value=80.0, step=1.0, key="_ui_sim_h_cm")
+                    sim["v_cm"] = st.number_input("Usulan V — tinggi awal (cm)", min_value=0.0,
+                        max_value=175.0, step=1.0, key="_ui_sim_v_cm")
+                    sim["d_cm"] = st.number_input("Usulan D — perpindahan vertikal (cm)", min_value=25.0,
+                        max_value=175.0, step=1.0, key="_ui_sim_d_cm")
+                    sim["a_deg"] = st.number_input("Usulan A — sudut asimetri (°)", min_value=0.0,
+                        max_value=135.0, step=5.0, key="_ui_sim_a_deg")
+                with sc2:
+                    sim["f_lift"] = st.number_input("Usulan F — angkatan/menit", min_value=0.2,
+                        max_value=12.0, step=0.2, key="_ui_sim_f_lift")
+                    sim["berat_beban"] = st.number_input("Usulan berat beban (kg)", min_value=1.0,
+                        max_value=60.0, step=1.0, key="_ui_sim_berat_beban")
+                    sim["durasi_angkat"] = st.selectbox("Usulan durasi angkat", durasi_options,
+                        key="_ui_sim_durasi_angkat")
+                    sim["coupling"] = st.selectbox("Usulan kualitas genggaman", coupling_options,
+                        key="_ui_sim_coupling")
+
+            komparasi = bandingkan_skenario_niosh(m9, sim)
+            awal, usulan = komparasi["awal"], komparasi["usulan"]
+            km1, km2, km3 = st.columns(3)
+            km1.metric("LI kondisi awal", f"{awal['li']:.3f}" if awal["li"] is not None else "Tidak valid")
+            km2.metric("LI usulan", f"{usulan['li']:.3f}" if usulan["li"] is not None else "Tidak valid")
+            km3.metric("Perubahan indikator LI", (
+                f"Turun {komparasi['perubahan_li_pct']:.1f}%" if komparasi["perubahan_li_pct"] is not None
+                and komparasi["perubahan_li_pct"] >= 0 else
+                f"Naik {-komparasi['perubahan_li_pct']:.1f}%" if komparasi["perubahan_li_pct"] is not None
+                else "Tidak dapat dihitung"
+            ))
+            if awal["li"] is None or usulan["li"] is None:
+                st.error(komparasi["status"])
+            elif komparasi["perubahan_li_pct"] > 0:
+                st.success(komparasi["status"])
+            else:
+                st.warning(komparasi["status"])
+            st.caption(
+                "Target LI ≤ 1 adalah acuan evaluasi NIOSH, bukan jaminan bebas cedera. "
+                "Persentase di atas adalah perubahan angka LI, bukan persentase penurunan risiko cedera."
+            )
+
+            labels_sim = [
+                ("h_cm", "H (cm)"), ("v_cm", "V (cm)"), ("d_cm", "D (cm)"),
+                ("a_deg", "A (°)"), ("f_lift", "F (kali/menit)"),
+                ("berat_beban", "Beban (kg)"), ("durasi_angkat", "Durasi"),
+                ("coupling", "Genggaman"),
+            ]
+            rows_sim = [
+                {"Parameter": label, "Kondisi awal": m9[field], "Usulan": sim[field]}
+                for field, label in labels_sim
+            ]
+            rows_sim.extend([
+                {"Parameter": "RWL (kg)", "Kondisi awal": awal["rwl"], "Usulan": usulan["rwl"]},
+                {"Parameter": "LI", "Kondisi awal": awal["li"], "Usulan": usulan["li"]},
+                {"Parameter": "Kategori", "Kondisi awal": awal["kategori"], "Usulan": usulan["kategori"]},
+            ])
+            df_sim = pd.DataFrame(rows_sim)
+            for col in ("Kondisi awal", "Usulan"):
+                df_sim[col] = df_sim[col].map(lambda value: "—" if value is None else str(value))
+            st.dataframe(df_sim, use_container_width=True, hide_index=True)
+            st.download_button(
+                "⬇️ Unduh perbandingan skenario (.csv)",
+                data=df_sim.to_csv(index=False).encode("utf-8-sig"),
+                file_name="Simulasi_Perbaikan_NIOSH.csv",
+                mime="text/csv", use_container_width=True,
+            )
 
         st.session_state["analisis_modul"]["Modul 09"] = st.text_area(
             "Analisis & Pembahasan Modul 09:", value=st.session_state["analisis_modul"]["Modul 09"]
@@ -1253,7 +1389,12 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
 
     calc_results = compile_all_calculations()
     excel_bytes = export_session_to_excel(st.session_state, calc_results)
-    pdf_bytes = generate_pdf_report(st.session_state, calc_results)
+    try:
+        pdf_bytes = generate_pdf_report(st.session_state, calc_results)
+        pdf_error = None
+    except (RuntimeError, ValueError, OSError) as exc:
+        pdf_bytes = None
+        pdf_error = str(exc)
     json_str = export_session_to_json(st.session_state)
 
     col_dl1, col_dl2, col_dl3 = st.columns(3, gap="medium")
@@ -1267,12 +1408,15 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
         </div>
         """, unsafe_allow_html=True)
         st.download_button(
-            label="⬇️ Unduh Laporan Resmi (.pdf)",
-            data=pdf_bytes,
+            label="⬇️ Unduh Laporan Resmi (.pdf)" if pdf_bytes is not None else "PDF belum tersedia",
+            data=pdf_bytes if pdf_bytes is not None else b"",
             file_name=f"Berita_Acara_Ergonomi_{st.session_state['identitas']['kelas']}_{st.session_state['identitas']['kelompok'].replace(' ', '_')}.pdf",
             mime="application/pdf",
             use_container_width=True,
+            disabled=pdf_bytes is None,
         )
+        if pdf_error:
+            st.warning(f"Ekspor PDF sementara tidak tersedia: {pdf_error}. Ekspor Excel dan JSON tetap dapat digunakan.")
 
     with col_dl2:
         st.markdown("""
@@ -1320,6 +1464,9 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
             for widget_key in ("_ui_m9_durasi", "_ui_m9_coupling", "_ui_snook_aktivitas",
                                "_ui_snook_jk", "_ui_snook_persentil"):
                 st.session_state.pop(widget_key, None)
+            for widget_key in list(st.session_state):
+                if widget_key.startswith("_ui_sim_"):
+                    st.session_state.pop(widget_key, None)
             st.session_state["_json_restore_success"] = True
             st.rerun()
         except Exception as e:

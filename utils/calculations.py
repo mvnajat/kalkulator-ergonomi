@@ -328,6 +328,11 @@ def hitung_waktu_kerja(observations: list, p_westinghouse: float, allowance_pct:
     Menghitung Waktu Siklus (Ws), Waktu Normal (Wn), Waktu Baku (Wb),
     serta Uji Keseragaman (BKA/BKB) dan Uji Kecukupan Data (N').
     """
+    params = (p_westinghouse, allowance_pct, k_level, s_level)
+    if not all(np.isfinite(float(value)) for value in params):
+        raise ValueError("Parameter time study harus berupa angka hingga.")
+    if 1.0 + p_westinghouse <= 0 or not 0 <= allowance_pct < 100 or k_level <= 0 or s_level <= 0:
+        raise ValueError("Faktor penyesuaian, kelonggaran (0–<100%), k, dan tingkat ketelitian tidak valid.")
     arr = _positive_measurements(observations)
     n = len(arr)
     if n == 0:
@@ -349,7 +354,7 @@ def hitung_waktu_kerja(observations: list, p_westinghouse: float, allowance_pct:
     p_factor = 1.0 + p_westinghouse
     wn = mean_ws * p_factor
     # Waktu Baku dengan rumus Wb = Wn * (100 / (100 - Allowance%))
-    wb = wn * (100.0 / max(1.0, (100.0 - allowance_pct)))
+    wb = wn * (100.0 / (100.0 - allowance_pct))
 
     return {
         "n": n,
@@ -370,6 +375,8 @@ def hitung_waktu_kerja(observations: list, p_westinghouse: float, allowance_pct:
 
 def hitung_antropometri_statistik(values: list, k_level: float = 2.0, s_level: float = 0.05) -> dict:
     """Menghitung Rata-rata, SD, BKA, BKB, N', Persentil (P5, P10, P50, P90, P95), dan Uji Normalitas Shapiro-Wilk."""
+    if not all(np.isfinite(float(v)) and v > 0 for v in (k_level, s_level)):
+        raise ValueError("Nilai k dan tingkat ketelitian harus positif dan hingga.")
     arr = _positive_measurements(values)
     n = len(arr)
     if n == 0:
