@@ -62,8 +62,8 @@ st.markdown("""
         color: #1e293b;
     }
     .block-container {
-        max-width: 1420px;
-        padding-top: 4.5rem !important;
+        max-width: 1260px;
+        padding-top: 4.1rem !important;
         padding-bottom: 3rem;
     }
     header[data-testid="stHeader"] {
@@ -104,12 +104,12 @@ st.markdown("""
 
     /* Hero Banner Utama */
     .hero-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        padding: 22px 26px;
-        margin-bottom: 20px;
-        margin-top: 8px;
+        background: linear-gradient(130deg, #f0fdf4, #ffffff 68%);
+        border: 1px solid #bbf7d0;
+        border-radius: 18px;
+        padding: 28px 30px;
+        margin-bottom: 16px;
+        margin-top: 10px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
     .hero-subtitle {
@@ -122,7 +122,7 @@ st.markdown("""
     }
     .hero-title {
         color: #0f172a;
-        font-size: 1.65rem;
+        font-size: clamp(1.5rem, 2.5vw, 2.3rem);
         font-weight: 700;
         margin: 0 0 6px 0;
     }
@@ -237,6 +237,38 @@ st.markdown("""
         border-color: #15803d;
         color: #15803d;
     }
+    div[data-testid="stButton"]:has(button[kind="primary"]) button {
+        background: #166534;
+        color: #ffffff;
+        border-color: #166534;
+    }
+    div[data-testid="stButton"]:has(button[kind="primary"]) button:hover {
+        background: #14532d;
+        color: #ffffff;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 4px;
+        gap: 2px;
+        overflow-x: auto;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        border-radius: 8px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    [data-testid="stTabs"] [aria-selected="true"] {
+        background: #dcfce7;
+        color: #166534;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-panel"] {
+        padding-top: 1rem;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"]:has(> [data-testid="stVerticalBlock"]) {
+        border-radius: 14px;
+    }
     div.stButton > button:focus-visible,
     div.stDownloadButton > button:focus-visible {
         outline: 3px solid #34d399;
@@ -263,6 +295,8 @@ st.markdown("""
         .hero-card { padding: 18px 16px; margin-top: 12px; }
         .hero-title { font-size: 1.3rem; line-height: 1.3; }
         .hero-desc { font-size: 0.85rem; }
+        [data-testid="stTabs"] [data-baseweb="tab"] { font-size: 0.83rem; padding: 0.65rem; }
+        .upb-top-left-fixed { display: none; }
         .panel-card, .module-card { padding: 15px 14px; }
         .mod-desc { min-height: 0; }
         div.stButton > button { min-height: 44px; height: auto; }
@@ -300,6 +334,8 @@ def init_session_state():
     wib_now = datetime.now(ZoneInfo("Asia/Jakarta"))
     st.session_state["nav_page"] = "Beranda"
     st.session_state["selected_modul"] = "Modul 01 - Fisiologi Kerja"
+    st.session_state["ux_mode"] = "Pemula"
+    st.session_state["ux_guide_dismissed"] = False
     st.session_state["project_name"] = "Praktikum Ergonomi - Proyek 1"
     st.session_state["module_done"] = {}
     st.session_state["_local_projects"] = {}
@@ -752,6 +788,39 @@ def render_module_navigation(place: str) -> None:
             go_to_page(MODULE_ORDER[idx + 1])
 
 
+MODULE_GUIDANCE = {
+    "01": "Ukur nadi istirahat, nadi kerja, dan P0–P5 setiap operator.",
+    "02": "Periksa skor observasi postur; foto hanyalah bantuan yang harus diverifikasi.",
+    "03": "Isi waktu pengamatan, tentukan penyesuaian, lalu bandingkan waktu baku.",
+    "04": "Masukkan dimensi tubuh hasil pengukuran sebelum membaca persentil.",
+    "05": "Masukkan dimensi kunci dan pilih persentil sebelum melihat desain CAD.",
+    "06": "Catat suhu pada dua kondisi, tiga pengamatan setiap kondisi.",
+    "07": "Catat dBA pada dua kondisi; bacaan sesaat bukan dosis kebisingan.",
+    "08": "Catat intensitas cahaya pada dua kondisi dan cocokkan dengan tugas.",
+    "09": "Pilih metode pemindahan material, masukkan parameter, lalu evaluasi hasil.",
+}
+
+
+def module_workspace_tabs(slug: str):
+    """Alur visual konsisten pada sembilan modul, tanpa menghapus kalkulator lama."""
+    number = slug.split("-")[-1]
+    st.subheader(MODULE_PAGE_TITLES[slug])
+    left, right = st.columns([2.5, 1], vertical_alignment="bottom")
+    with left:
+        st.caption(MODULE_GUIDANCE[number])
+    with right:
+        modes = ["Pemula", "Lanjutan"]
+        selected = st.session_state.get("ux_mode", "Pemula")
+        st.session_state["ux_mode"] = st.selectbox(
+            "Tingkat tampilan", modes, index=modes.index(selected) if selected in modes else 0,
+            key=f"ux_mode_{number}", help="Pemula menampilkan ringkasan; Lanjutan membuka detail perhitungan.",
+        )
+    if st.session_state["ux_mode"] == "Pemula":
+        st.info("**Panduan:** Mulai dari tab Data, lanjutkan ke Hasil, lalu tulis Analisis. "
+                "Buka tab Panduan & Laporan untuk melihat rumus dan menyimpan pekerjaan.", icon="💡")
+    return st.tabs(["1 · Data", "2 · Hasil", "3 · Analisis", "4 · Panduan & Laporan"])
+
+
 def reset_restored_widgets() -> None:
     """Loaded project/input must replace widget baselines from the old project."""
     for key in list(st.session_state):
@@ -963,25 +1032,26 @@ st.markdown(f"""
 
 nav_options = [
     ("Beranda", "beranda"), ("Daftar Modul", "daftar-modul"),
-    ("Identitas", "identitas"), ("Analisis Postur (RULA/OWAS/REBA)", "analisis-postur"),
-    ("Laporan & Cadangan", "laporan"),
+    ("Identitas", "identitas"), ("Proyek Saya", "proyek"),
+    ("Laporan", "laporan"),
 ]
-nav_cols = st.columns([1.15, 1.4, 1.15, 2.25, 1.6])
+nav_cols = st.columns(5)
 
 for idx, (label, slug) in enumerate(nav_options):
     with nav_cols[idx]:
         is_active = (st.session_state["_active_page_slug"] == slug or
                      (slug == "daftar-modul" and st.session_state["_active_page_slug"] in MODULE_PAGE_TITLES))
-        btn_label = f"🟢 {label}" if is_active else label
+        btn_label = f"● {label}" if is_active else label
         if st.button(btn_label, key=f"nav_btn_{idx}", use_container_width=True):
             go_to_page(slug)
 
 with st.sidebar:
-    st.markdown("### 🚀 Alat Praktikum")
+    st.markdown("### Menu pendukung")
     st.caption(f"Proyek: {st.session_state['project_name']}")
     for sidebar_slug, sidebar_label in (
-        ("dashboard", "📊 Dashboard"), ("proyek", "💾 Proyek Saya"),
-        ("impor-excel", "📥 Impor Excel"), ("ruang-belajar", "📖 Ruang Belajar"),
+        ("dashboard", "📊 Progres praktikum"),
+        ("impor-excel", "📥 Impor data Excel"), ("ruang-belajar", "📖 Panduan & rumus"),
+        ("analisis-postur", "📐 Input skor postur"),
     ):
         if st.button(sidebar_label, key=f"side_{sidebar_slug}", use_container_width=True):
             go_to_page(sidebar_slug)
@@ -991,13 +1061,17 @@ with st.sidebar:
 if st.session_state["nav_page"] != "Modul Praktikum":
     prepare_editor_scope(st.session_state, st.session_state["nav_page"])
 
-st.markdown(f"""
-<div class="hero-card">
-    <div class="hero-subtitle">{hero_identitas}</div>
-    <div class="hero-title">Ruang Praktikum Ergonomi & Perancangan Sistem Kerja</div>
-    <p class="hero-desc">Dilengkapi Evaluasi Fisiologi, RULA/OWAS/REBA + AI Pose Estimation, Time Study, Antropometri + CAD 2D & Database Populasi, Lingkungan Fisik, MMH (NIOSH/Snook/L5-S1), serta Ekspor PDF & Excel.</p>
-</div>
-""", unsafe_allow_html=True)
+if st.session_state["nav_page"] == "Beranda":
+    st.markdown(f"""
+    <div class="hero-card">
+        <div class="hero-subtitle">{hero_identitas} · LABORATORIUM DIGITAL</div>
+        <div class="hero-title">Praktikum ergonomi, langkah demi langkah.</div>
+        <p class="hero-desc">Masukkan pengamatan, pahami perhitungannya, lalu susun laporan.
+        Mulai dari identitas kelompok atau coba satu modul dengan data contoh.</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.caption(f"IE Toolkit / {st.session_state['nav_page']} · {st.session_state['project_name']}")
 
 wib_time = datetime.now(ZoneInfo("Asia/Jakarta"))
 total_postur_records = len(st.session_state["modul_02"]["records"]) * 3
@@ -1008,49 +1082,57 @@ total_bukti_gambar = st.session_state["modul_02"]["bukti_gambar_count"]
 # -----------------------------------------------------------------------------
 if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
     if st.session_state["nav_page"] == "Beranda":
-        tools_cols = st.columns(4)
-        for col, (label, slug) in zip(tools_cols, (
-            ("📊 Dashboard", "dashboard"), ("💾 Proyek", "proyek"),
-            ("📥 Impor Excel", "impor-excel"), ("📖 Belajar", "ruang-belajar"),
-        )):
-            with col:
-                if st.button(label, key=f"home_tool_{slug}", use_container_width=True):
-                    go_to_page(slug)
+        start_col, demo_col = st.columns([1, 1], gap="medium")
+        with start_col:
+            if st.button("Mulai praktikum →", key="home_start", type="primary", use_container_width=True):
+                go_to_page("identitas")
+        with demo_col:
+            if st.button("Coba Modul 01 dengan data contoh", key="home_demo", use_container_width=True):
+                go_to_page("modul-01")
+
+        done_count = sum(bool(st.session_state["module_done"].get(s)) for s in MODULE_ORDER)
+        st.caption(f"Proyek: {st.session_state['project_name']} · {done_count} dari 9 modul ditandai selesai · "
+                   "Data contoh belum dianggap hasil praktikum nyata.")
+        st.progress(done_count / len(MODULE_ORDER))
+        if not st.session_state.get("ux_guide_dismissed", False):
+            with st.container(border=True):
+                st.markdown("#### 👋 Baru pertama kali? Mulai dari sini")
+                a, b, c = st.columns(3)
+                a.markdown("**01 · Isi identitas**  \nNama kelompok dan operator.")
+                b.markdown("**02 · Kerjakan modul**  \nGanti data contoh dengan pengamatan.")
+                c.markdown("**03 · Unduh laporan**  \nPeriksa hasil lalu ekspor PDF/Excel.")
+                st.caption("Semua data tersimpan selama sesi aktif; gunakan Proyek Saya atau ekspor JSON "
+                           "sebelum menutup tab. Website ini alat bantu praktikum, bukan diagnosis atau sertifikasi K3.")
+                if st.button("Saya mengerti, tutup panduan", key="home_dismiss_guide"):
+                    st.session_state["ux_guide_dismissed"] = True
+                    st.rerun()
+
+        with st.expander("Akses cepat & alat pendukung", expanded=False):
+            tools_cols = st.columns(4)
+            for col, (label, slug) in zip(tools_cols, (
+                ("📊 Dashboard", "dashboard"), ("💾 Proyek", "proyek"),
+                ("📥 Impor Excel", "impor-excel"), ("📖 Belajar", "ruang-belajar"),
+            )):
+                with col:
+                    if st.button(label, key=f"home_tool_{slug}", use_container_width=True):
+                        go_to_page(slug)
     if st.session_state["nav_page"] == "Daftar Modul":
         st.subheader("📚 Daftar 9 Modul Praktikum")
         st.caption("Klik kartu untuk masuk ke halaman khusus modul. Tombol Back browser dan navigasi antarmodul dapat digunakan.")
-    left_col, right_col = st.columns([1.05, 2.35], gap="large")
+    left_col, right_col = st.columns([0.85, 2.8], gap="large")
 
     with left_col:
         st.markdown(f"""
         <div class="panel-card">
-            <h4 style="margin:0 0 12px 0; color:#0f172a; font-size:1.05rem;">Ringkasan Praktikum</h4>
+            <h4 style="margin:0 0 12px 0; color:#0f172a; font-size:1.05rem;">Sekilas aplikasi</h4>
             <div class="summary-item">
                 <div class="summary-val">{wib_time.strftime('%d-%m-%Y · %H:%M WIB')}</div>
                 <div class="summary-sub">Waktu Server Lokal (Asia/Jakarta)</div>
             </div>
-            <div class="summary-item">
-            <div class="summary-val">9 Modul Praktikum Terintegrasi</div>
-                <div class="summary-sub">Termasuk MMH (NIOSH, Snook, Biomekanika L5/S1) & CAD 2D</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-val">{total_postur_records} Evaluasi Postur + AI Pose</div>
-                <div class="summary-sub">RULA, OWAS, REBA & deteksi sudut foto otomatis</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-val">Ekspor Multi-Format (PDF, XLSX, JSON, SQLite)</div>
-                <div class="summary-sub">Laporan resmi siap cetak & database antropometri lintas kelompok</div>
-            </div>
-        </div>
-
-        <div class="emerald-notice">
-            <strong>🚀 Fitur Pengembangan Aktif:</strong><br>
-            1. <b>MMH & Biomekanika</b> (NIOSH RWL/LI, Snook, L5/S1)<br>
-            2. <b>Visualisasi CAD 2D & Kurva Normal</b><br>
-            3. <b>AI Pose Estimation</b> pada foto postur kerja<br>
-            4. <b>Generator Laporan PDF</b> siap cetak<br>
-            5. <b>Database SQLite Sementara</b> & Indikator Lingkungan K3<br>
-            6. <b>Simulasi Sebelum–Sesudah</b> pengendalian angkat berdasarkan NIOSH
+            <div class="summary-item"><div class="summary-val">9 modul terintegrasi</div>
+                <div class="summary-sub">Dari fisiologi hingga pemindahan material</div></div>
+            <div class="summary-item"><div class="summary-val">Laporan PDF & Excel</div>
+                <div class="summary-sub">Hasil dan rumus bisa ditelusuri kembali</div></div>
         </div>
         """, unsafe_allow_html=True)
         if st.session_state["nav_page"] == "Beranda":
@@ -1058,7 +1140,7 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
                 go_to_page("daftar-modul")
 
     with right_col:
-        st.markdown("<h4 style='margin:0 0 10px 0; color:#0f172a;'>Modul Akademik</h4>", unsafe_allow_html=True)
+        st.markdown("#### Pilih modul yang ingin dikerjakan")
         search_q = st.text_input(
             "Cari modul",
             placeholder="Cari berdasarkan nama atau nomor modul (misal: NIOSH, Antropometri, RULA, 09)...",
@@ -1088,7 +1170,7 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
                 st.markdown(f"""
                 <div class="module-card">
                     <span class="badge-pill">{m_code}</span>
-                    <span class="badge-done">Siap Olah</span>
+                    <span class="badge-done">{'Sudah diperiksa' if st.session_state['module_done'].get(page_slug) else 'Belum diperiksa'}</span>
                     <div class="mod-title">{m_title}</div>
                     <div class="mod-desc">{m_desc}</div>
                     <div class="mod-footer">Teknik Industri · Data terintegrasi ke Laporan PDF & Excel</div>
@@ -1160,654 +1242,687 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
     chosen = MODULE_PAGE_TITLES[st.session_state["_active_page_slug"]]
     render_module_navigation("atas")
     prepare_editor_scope(st.session_state, f"Modul Praktikum:{chosen}")
-    st.divider()
+    step_tabs = module_workspace_tabs(st.session_state["_active_page_slug"])
 
     # --- MODUL 01: FISIOLOGI ---
     if chosen == "Modul 01 - Fisiologi Kerja":
-        st.subheader("🫀 Modul 01: Fisiologi Kerja & Beban Kardiovaskular (%CVL)", anchor="modul-01-fisiologi")
         m1 = st.session_state["modul_01"]
         id_info = st.session_state["identitas"]
 
-        col_op1, col_op2 = st.columns(2, gap="large")
-        with col_op1:
-            st.markdown(f"#### 👤 {id_info['op1_nama']} ({id_info['op1_usia']} thn, {id_info['op1_jk']})")
-            m1["op1_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 1)", value=m1["op1_akt1_nama"])
-            a1, a2 = st.columns(2)
-            m1["op1_akt1_dni"] = a1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op1_akt1_dni"]), key="op1_dni1")
-            m1["op1_akt1_dnk"] = a2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op1_akt1_dnk"]), key="op1_dnk1")
 
-            m1["op1_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 1)", value=m1["op1_akt2_nama"])
-            b1, b2 = st.columns(2)
-            m1["op1_akt2_dni"] = b1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op1_akt2_dni"]), key="op1_dni2")
-            m1["op1_akt2_dnk"] = b2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op1_akt2_dnk"]), key="op1_dnk2")
+        with step_tabs[0]:
+            col_op1, col_op2 = st.columns(2, gap="large")
+            with col_op1:
+                st.markdown(f"#### 👤 {id_info['op1_nama']} ({id_info['op1_usia']} thn, {id_info['op1_jk']})")
+                m1["op1_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 1)", value=m1["op1_akt1_nama"])
+                a1, a2 = st.columns(2)
+                m1["op1_akt1_dni"] = a1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op1_akt1_dni"]), key="op1_dni1")
+                m1["op1_akt1_dnk"] = a2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op1_akt1_dnk"]), key="op1_dnk1")
 
-        with col_op2:
-            st.markdown(f"#### 👤 {id_info['op2_nama']} ({id_info['op2_usia']} thn, {id_info['op2_jk']})")
-            m1["op2_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 2)", value=m1["op2_akt1_nama"])
-            c1, c2 = st.columns(2)
-            m1["op2_akt1_dni"] = c1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op2_akt1_dni"]), key="op2_dni1")
-            m1["op2_akt1_dnk"] = c2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op2_akt1_dnk"]), key="op2_dnk1")
+                m1["op1_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 1)", value=m1["op1_akt2_nama"])
+                b1, b2 = st.columns(2)
+                m1["op1_akt2_dni"] = b1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op1_akt2_dni"]), key="op1_dni2")
+                m1["op1_akt2_dnk"] = b2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op1_akt2_dnk"]), key="op1_dnk2")
 
-            m1["op2_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 2)", value=m1["op2_akt2_nama"])
-            d1, d2 = st.columns(2)
-            m1["op2_akt2_dni"] = d1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op2_akt2_dni"]), key="op2_dni2")
-            m1["op2_akt2_dnk"] = d2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op2_akt2_dnk"]), key="op2_dnk2")
+            with col_op2:
+                st.markdown(f"#### 👤 {id_info['op2_nama']} ({id_info['op2_usia']} thn, {id_info['op2_jk']})")
+                m1["op2_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 2)", value=m1["op2_akt1_nama"])
+                c1, c2 = st.columns(2)
+                m1["op2_akt1_dni"] = c1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op2_akt1_dni"]), key="op2_dni1")
+                m1["op2_akt1_dnk"] = c2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op2_akt1_dnk"]), key="op2_dnk1")
 
-        calc_all = compile_all_calculations()
-        df_m1 = pd.DataFrame(calc_all["m1_rows"], columns=[
-            "Operator", "Aktivitas", "Usia (th)", "DN Istirahat", "DN Kerja",
-            "DN Maks", "%CVL (%)", "Konsumsi Energi Bersih (kkal/mnt)", "Kategori Beban", "Rekomendasi"
-        ])
-        st.markdown("#### 📊 Hasil Perhitungan Fisiologi Kerja (%CVL & Konsumsi Energi)")
-        st.dataframe(df_m1, use_container_width=True, hide_index=True)
+                m1["op2_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 2)", value=m1["op2_akt2_nama"])
+                d1, d2 = st.columns(2)
+                m1["op2_akt2_dni"] = d1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op2_akt2_dni"]), key="op2_dni2")
+                m1["op2_akt2_dnk"] = d2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op2_akt2_dnk"]), key="op2_dnk2")
 
-        for message in calc_all.get("m1_errors", []):
-            st.error(f"Periksa data: {message}")
+            st.markdown("#### 💓 Pemulihan Denyut Nadi (P0–P5), ECPT & ECPM")
+            st.caption("Masukkan nadi terukur dalam bpm. P0 = sebelum kerja; P1–P5 = pengamatan saat/setelah aktivitas sesuai protokol praktikum. "
+                       "Contoh isian awal hanya ilustrasi dan harus diganti dengan hasil pengamatan.")
+            m1.setdefault("pemulihan", {})
+            pulse_defaults = {"op1": (82, 115, 86, 85, 83, 75), "op2": (88, 111, 92, 92, 90, 86)}
+            recovery_cols = st.columns(2, gap="large")
+            for idx, op in enumerate(("op1", "op2")):
+                with recovery_cols[idx]:
+                    st.markdown(f"**{id_info[op + '_nama']}**")
+                    points = m1["pemulihan"].setdefault(op, {f"P{i}": float(p) for i, p in enumerate(pulse_defaults[op])})
+                    for group in (("P0", "P1", "P2"), ("P3", "P4", "P5")):
+                        cols = st.columns(3)
+                        for col, label in zip(cols, group):
+                            points[label] = col.number_input(
+                                f"{label} (bpm) · {op.upper()}", min_value=30.0, max_value=250.0,
+                                value=float(points.get(label, pulse_defaults[op][int(label[1])])), step=1.0,
+                                key=f"pulse_{op}_{label}",
+                            )
 
-        st.markdown("#### 💓 Pemulihan Denyut Nadi (P0–P5), ECPT & ECPM")
-        st.caption("Masukkan nadi terukur dalam bpm. P0 = sebelum kerja; P1–P5 = pengamatan saat/setelah aktivitas sesuai protokol praktikum. "
-                   "Contoh isian awal hanya ilustrasi dan harus diganti dengan hasil pengamatan.")
-        m1.setdefault("pemulihan", {})
-        pulse_defaults = {"op1": (82, 115, 86, 85, 83, 75), "op2": (88, 111, 92, 92, 90, 86)}
-        recovery_cols = st.columns(2, gap="large")
-        for idx, op in enumerate(("op1", "op2")):
-            with recovery_cols[idx]:
-                st.markdown(f"**{id_info[op + '_nama']}**")
-                points = m1["pemulihan"].setdefault(op, {f"P{i}": float(p) for i, p in enumerate(pulse_defaults[op])})
-                for group in (("P0", "P1", "P2"), ("P3", "P4", "P5")):
-                    cols = st.columns(3)
-                    for col, label in zip(cols, group):
-                        points[label] = col.number_input(
-                            f"{label} (bpm) · {op.upper()}", min_value=30.0, max_value=250.0,
-                            value=float(points.get(label, pulse_defaults[op][int(label[1])])), step=1.0,
-                            key=f"pulse_{op}_{label}",
-                        )
-        calc_all = compile_all_calculations()
-        recovery_rows = calc_all.get("m1_recovery_rows", [])
-        if recovery_rows:
-            st.dataframe(pd.DataFrame(recovery_rows, columns=[
-                "Operator", "P0", "P1", "P2", "P3", "P4", "P5", "ECPT (bpm)",
-                "ECPM (bpm)", "Pemulihan P1→P5 (%)", "Catatan",
-            ]), use_container_width=True, hide_index=True)
-            chart = pd.DataFrame({r[0]: r[1:7] for r in recovery_rows}, index=[f"P{i}" for i in range(6)])
-            st.line_chart(chart, x_label="Titik pengamatan", y_label="Denyut nadi (bpm)")
-        with st.expander("🔎 Rumus dan interpretasi ECPT/ECPM", expanded=False):
-            st.latex(r"ECPT = \frac{P3+P4+P5}{3}-P0")
-            st.latex(r"ECPM = (P1+P2-P3)-\frac{P3+P4+P5}{3}")
-            st.caption("Sesuai rumus di pedoman praktikum Modul 01 (MODUL-1-8.docx). "
-                       "Meski nama historisnya *Extra Calorie*, operasi ini menggunakan nadi: satuan selisihnya bpm, "
-                       "**bukan energi kkal**. Nilai negatif dipertahankan untuk analisis, bukan dipaksa nol.")
+        with step_tabs[1]:
+            calc_all = compile_all_calculations()
+            df_m1 = pd.DataFrame(calc_all["m1_rows"], columns=[
+                "Operator", "Aktivitas", "Usia (th)", "DN Istirahat", "DN Kerja",
+                "DN Maks", "%CVL (%)", "Konsumsi Energi Bersih (kkal/mnt)", "Kategori Beban", "Rekomendasi"
+            ])
+            st.markdown("#### 📊 Hasil Perhitungan Fisiologi Kerja (%CVL & Konsumsi Energi)")
+            st.dataframe(df_m1, use_container_width=True, hide_index=True)
 
-        high_cvl = [r for r in calc_all["m1_rows"] if r[6] > 30.0]
-        if high_cvl:
-            st.warning(f"⚠️ **Validasi Fisiologi Otomatis:** Terdapat {len(high_cvl)} aktivitas dengan nilai **%CVL > 30%** ({', '.join(r[1] for r in high_cvl)}). Diperlukan penjadwalan waktu istirahat atau rotasi operator.")
-        elif not calc_all.get("m1_errors"):
-            st.success("✅ **Validasi Fisiologi Otomatis:** Seluruh aktivitas memiliki beban kardiovaskular %CVL ≤ 30% (Aman tanpa kelelahan berarti).")
+            for message in calc_all.get("m1_errors", []):
+                st.error(f"Periksa data: {message}")
 
-        st.session_state["analisis_modul"]["Modul 01"] = st.text_area(
-            "Analisis & Pembahasan Modul 01:", value=st.session_state["analisis_modul"]["Modul 01"]
-        )
+            calc_all = compile_all_calculations()
+            recovery_rows = calc_all.get("m1_recovery_rows", [])
+            if recovery_rows:
+                st.dataframe(pd.DataFrame(recovery_rows, columns=[
+                    "Operator", "P0", "P1", "P2", "P3", "P4", "P5", "ECPT (bpm)",
+                    "ECPM (bpm)", "Pemulihan P1→P5 (%)", "Catatan",
+                ]), use_container_width=True, hide_index=True)
+                chart = pd.DataFrame({r[0]: r[1:7] for r in recovery_rows}, index=[f"P{i}" for i in range(6)])
+                st.line_chart(chart, x_label="Titik pengamatan", y_label="Denyut nadi (bpm)")
+            with st.expander("🔎 Rumus dan interpretasi ECPT/ECPM", expanded=False):
+                st.latex(r"ECPT = \frac{P3+P4+P5}{3}-P0")
+                st.latex(r"ECPM = (P1+P2-P3)-\frac{P3+P4+P5}{3}")
+                st.caption("Sesuai rumus di pedoman praktikum Modul 01 (MODUL-1-8.docx). "
+                           "Meski nama historisnya *Extra Calorie*, operasi ini menggunakan nadi: satuan selisihnya bpm, "
+                           "**bukan energi kkal**. Nilai negatif dipertahankan untuk analisis, bukan dipaksa nol.")
+
+            high_cvl = [r for r in calc_all["m1_rows"] if r[6] > 30.0]
+            if high_cvl:
+                st.warning(f"⚠️ **Validasi Fisiologi Otomatis:** Terdapat {len(high_cvl)} aktivitas dengan nilai **%CVL > 30%** ({', '.join(r[1] for r in high_cvl)}). Diperlukan penjadwalan waktu istirahat atau rotasi operator.")
+            elif not calc_all.get("m1_errors"):
+                st.success("✅ **Validasi Fisiologi Otomatis:** Seluruh aktivitas memiliki beban kardiovaskular %CVL ≤ 30% (Aman tanpa kelelahan berarti).")
+
+        with step_tabs[2]:
+            st.session_state["analisis_modul"]["Modul 01"] = st.text_area(
+                "Analisis & Pembahasan Modul 01:", value=st.session_state["analisis_modul"]["Modul 01"]
+            )
 
     # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
     elif chosen == "Modul 02 - Postur Kerja":
-        st.subheader("🧍 Modul 02: Evaluasi Postur Kerja Terpadu & AI Pose Estimation", anchor="modul-02-postur")
-        calc_all = compile_all_calculations()
-        df_m2 = pd.DataFrame(calc_all["m2_rows"], columns=[
-            "Operator", "Aktivitas", "Metode", "Skor / Kode Akhir", "Action Level", "Kategori Risiko", "Rekomendasi Perbaikan"
-        ])
-        st.dataframe(df_m2, use_container_width=True, hide_index=True)
+        with step_tabs[0]:
+            st.markdown("##### 🤖 Deteksi Sudut Postur Otomatis (Unggah Foto atau Potret dari Kamera)")
+            tab_upload, tab_kamera = st.tabs(["📁 Unggah File Foto (JPG/PNG)", "📸 Potret Langsung dari Kamera"])
 
-        st.markdown("##### 🤖 Deteksi Sudut Postur Otomatis (Unggah Foto atau Potret dari Kamera)")
-        tab_upload, tab_kamera = st.tabs(["📁 Unggah File Foto (JPG/PNG)", "📸 Potret Langsung dari Kamera"])
+            semua_gambar = []
 
-        semua_gambar = []
+            with tab_upload:
+                uploaded_imgs = st.file_uploader(
+                    "Pilih satu atau beberapa foto postur kerja:",
+                    type=["png", "jpg", "jpeg"],
+                    accept_multiple_files=True,
+                    key="upload_m2"
+                )
+                if uploaded_imgs:
+                    semua_gambar.extend(uploaded_imgs)
 
-        with tab_upload:
-            uploaded_imgs = st.file_uploader(
-                "Pilih satu atau beberapa foto postur kerja:",
-                type=["png", "jpg", "jpeg"],
-                accept_multiple_files=True,
-                key="upload_m2"
+            with tab_kamera:
+                st.caption("Gunakan kamera laptop (Webcam) atau kamera belakang HP saat praktikum berlangsung.")
+                aktifkan_kamera = st.checkbox("🟢 Aktifkan Kamera Perangkat", value=False)
+                if aktifkan_kamera:
+                    cam_img = st.camera_input("Arahkan kamera ke samping tubuh operator lalu klik 'Take Photo'")
+                    if cam_img is not None:
+                        cam_img.name = f"Kamera_Postur_{datetime.now().strftime('%H%M%S')}.jpg"
+                        semua_gambar.append(cam_img)
+
+            if semua_gambar:
+                st.session_state["modul_02"]["bukti_gambar_count"] = len(semua_gambar)
+                records = st.session_state["modul_02"]["records"]
+                opsi_target = [f"{r['id']} · {r['operator']} ({r['aktivitas']})" for r in records]
+
+                for i, img_f in enumerate(semua_gambar):
+                    st.divider()
+                    pose_res = deteksi_postur_mediapipe(img_f)
+                    p_col1, p_col2 = st.columns([1.1, 1.9], gap="medium")
+                    with p_col1:
+                        st.image(pose_res["annotated_image"], caption=f"{img_f.name} ({pose_res['mode']})", use_container_width=True)
+                    with p_col2:
+                        st.markdown(f"**Hasil Ekstraksi Sudut Tubuh (`{img_f.name}`):**")
+                        st.json(pose_res["sudut"])
+                        rek = pose_res.get("skor_rekomendasi")
+                        if not pose_res.get("valid_detection") or not rek:
+                            st.warning("Pose manusia belum terdeteksi dengan andal. Skor otomatis tidak tersedia; "
+                                       "unggah foto yang memperlihatkan seluruh tubuh atau masukkan skor secara manual.")
+                        else:
+                            st.info(
+                                f"💡 **Saran skor sementara (verifikasi manual):** Lengan Atas = **{rek['ua']}**, "
+                                f"Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**"
+                            )
+                            target_idx = st.selectbox(
+                                "Pilih Aktivitas Tujuan:", range(len(records)),
+                                format_func=lambda x: opsi_target[x], key=f"target_rec_{i}"
+                            )
+                            if st.button(f"⚡ Terapkan Skor ke {records[target_idx]['id']}", key=f"apply_pose_{i}"):
+                                rec_target = st.session_state["modul_02"]["records"][target_idx]
+                                rec_target["rula_params"].update(rek)
+                                rec_target["reba_params"].update({
+                                    "ua": rek["ua"], "la": min(2, rek["la"]),
+                                    "neck": min(3, rek["nk"]), "trunk": rek["tr"]
+                                })
+                                st.success(f"Skor RULA & REBA pada {rec_target['id']} berhasil diperbarui dari foto!")
+                                st.rerun()
+
+            st.divider()
+            if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
+                go_to_page("analisis-postur")
+
+            with st.expander("🔄 Simulasi perbaikan postur RULA (tanpa mengubah observasi)"):
+                st.caption("Gunakan skor contoh usulan untuk memahami perubahan grand score; "
+                           "nilai resmi harus diperoleh dari observasi setelah perbaikan.")
+                rec = st.session_state["modul_02"]["records"][0]
+                original = rec["rula_params"]
+                rula_before = hitung_rula(original["ua"], original["la"], original["wr"], original["wt"],
+                                         original["nk"], original["tr"], original["lg"], original["ma"],
+                                         original["fa"], original["mb"], original["fb"])
+                r1, r2, r3 = st.columns(3)
+                proposed_ua = r1.slider("Usulan skor lengan atas", 1, 6, int(original["ua"]), key="sim_rula_ua")
+                proposed_nk = r2.slider("Usulan skor leher", 1, 6, int(original["nk"]), key="sim_rula_nk")
+                proposed_tr = r3.slider("Usulan skor punggung", 1, 6, int(original["tr"]), key="sim_rula_tr")
+                rula_after = hitung_rula(proposed_ua, original["la"], original["wr"], original["wt"],
+                                        proposed_nk, proposed_tr, original["lg"], original["ma"],
+                                        original["fa"], original["mb"], original["fb"])
+                before, after = rula_before["grand_score"], rula_after["grand_score"]
+                r1.metric("RULA sebelum", before)
+                r2.metric("RULA usulan", after)
+                r3.metric("Perubahan skor", f"{after-before:+d}")
+                st.caption("Simulasi hanya mengganti tiga komponen postur; parameter lain tetap. "
+                           "Penurunan skor tidak sama dengan persentase penurunan risiko cedera.")
+
+        with step_tabs[1]:
+            calc_all = compile_all_calculations()
+            df_m2 = pd.DataFrame(calc_all["m2_rows"], columns=[
+                "Operator", "Aktivitas", "Metode", "Skor / Kode Akhir", "Action Level", "Kategori Risiko", "Rekomendasi Perbaikan"
+            ])
+            st.dataframe(df_m2, use_container_width=True, hide_index=True)
+
+        with step_tabs[2]:
+            st.session_state["analisis_modul"]["Modul 02"] = st.text_area(
+                "Analisis & Pembahasan Modul 02:", value=st.session_state["analisis_modul"]["Modul 02"]
             )
-            if uploaded_imgs:
-                semua_gambar.extend(uploaded_imgs)
-
-        with tab_kamera:
-            st.caption("Gunakan kamera laptop (Webcam) atau kamera belakang HP saat praktikum berlangsung.")
-            aktifkan_kamera = st.checkbox("🟢 Aktifkan Kamera Perangkat", value=False)
-            if aktifkan_kamera:
-                cam_img = st.camera_input("Arahkan kamera ke samping tubuh operator lalu klik 'Take Photo'")
-                if cam_img is not None:
-                    cam_img.name = f"Kamera_Postur_{datetime.now().strftime('%H%M%S')}.jpg"
-                    semua_gambar.append(cam_img)
-
-        if semua_gambar:
-            st.session_state["modul_02"]["bukti_gambar_count"] = len(semua_gambar)
-            records = st.session_state["modul_02"]["records"]
-            opsi_target = [f"{r['id']} · {r['operator']} ({r['aktivitas']})" for r in records]
-
-            for i, img_f in enumerate(semua_gambar):
-                st.divider()
-                pose_res = deteksi_postur_mediapipe(img_f)
-                p_col1, p_col2 = st.columns([1.1, 1.9], gap="medium")
-                with p_col1:
-                    st.image(pose_res["annotated_image"], caption=f"{img_f.name} ({pose_res['mode']})", use_container_width=True)
-                with p_col2:
-                    st.markdown(f"**Hasil Ekstraksi Sudut Tubuh (`{img_f.name}`):**")
-                    st.json(pose_res["sudut"])
-                    rek = pose_res.get("skor_rekomendasi")
-                    if not pose_res.get("valid_detection") or not rek:
-                        st.warning("Pose manusia belum terdeteksi dengan andal. Skor otomatis tidak tersedia; "
-                                   "unggah foto yang memperlihatkan seluruh tubuh atau masukkan skor secara manual.")
-                    else:
-                        st.info(
-                            f"💡 **Saran skor sementara (verifikasi manual):** Lengan Atas = **{rek['ua']}**, "
-                            f"Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**"
-                        )
-                        target_idx = st.selectbox(
-                            "Pilih Aktivitas Tujuan:", range(len(records)),
-                            format_func=lambda x: opsi_target[x], key=f"target_rec_{i}"
-                        )
-                        if st.button(f"⚡ Terapkan Skor ke {records[target_idx]['id']}", key=f"apply_pose_{i}"):
-                            rec_target = st.session_state["modul_02"]["records"][target_idx]
-                            rec_target["rula_params"].update(rek)
-                            rec_target["reba_params"].update({
-                                "ua": rek["ua"], "la": min(2, rek["la"]),
-                                "neck": min(3, rek["nk"]), "trunk": rek["tr"]
-                            })
-                            st.success(f"Skor RULA & REBA pada {rec_target['id']} berhasil diperbarui dari foto!")
-                            st.rerun()
-
-        st.divider()
-        if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
-            go_to_page("analisis-postur")
-
-        with st.expander("🔄 Simulasi perbaikan postur RULA (tanpa mengubah observasi)"):
-            st.caption("Gunakan skor contoh usulan untuk memahami perubahan grand score; "
-                       "nilai resmi harus diperoleh dari observasi setelah perbaikan.")
-            rec = st.session_state["modul_02"]["records"][0]
-            original = rec["rula_params"]
-            rula_before = hitung_rula(original["ua"], original["la"], original["wr"], original["wt"],
-                                     original["nk"], original["tr"], original["lg"], original["ma"],
-                                     original["fa"], original["mb"], original["fb"])
-            r1, r2, r3 = st.columns(3)
-            proposed_ua = r1.slider("Usulan skor lengan atas", 1, 6, int(original["ua"]), key="sim_rula_ua")
-            proposed_nk = r2.slider("Usulan skor leher", 1, 6, int(original["nk"]), key="sim_rula_nk")
-            proposed_tr = r3.slider("Usulan skor punggung", 1, 6, int(original["tr"]), key="sim_rula_tr")
-            rula_after = hitung_rula(proposed_ua, original["la"], original["wr"], original["wt"],
-                                    proposed_nk, proposed_tr, original["lg"], original["ma"],
-                                    original["fa"], original["mb"], original["fb"])
-            before, after = rula_before["grand_score"], rula_after["grand_score"]
-            r1.metric("RULA sebelum", before)
-            r2.metric("RULA usulan", after)
-            r3.metric("Perubahan skor", f"{after-before:+d}")
-            st.caption("Simulasi hanya mengganti tiga komponen postur; parameter lain tetap. "
-                       "Penurunan skor tidak sama dengan persentase penurunan risiko cedera.")
-
-        st.session_state["analisis_modul"]["Modul 02"] = st.text_area(
-            "Analisis & Pembahasan Modul 02:", value=st.session_state["analisis_modul"]["Modul 02"]
-        )
 
     # --- MODUL 03: PENGUKURAN WAKTU KERJA ---
     elif chosen == "Modul 03 - Pengukuran Waktu Kerja":
-        st.subheader("⏱️ Modul 03: Pengukuran Waktu Kerja (Time Study)", anchor="modul-03-waktu-kerja")
         m3 = st.session_state["modul_03"]
 
-        st.markdown("##### 1. Tabel Waktu Siklus Pengamatan (10 Siklus dalam Detik)")
-        m3["df_siklus"] = edit_table_rows(
-            st.session_state, m3["df_siklus"], "ed_m3", st.data_editor,
-            use_container_width=True, num_rows="dynamic",
-        )
+        with step_tabs[0]:
+            st.markdown("##### 1. Tabel Waktu Siklus Pengamatan (10 Siklus dalam Detik)")
+            m3["df_siklus"] = edit_table_rows(
+                st.session_state, m3["df_siklus"], "ed_m3", st.data_editor,
+                use_container_width=True, num_rows="dynamic",
+            )
 
-        st.markdown("##### 2. Penyesuaian Westinghouse & Kelonggaran (Allowance)")
-        w1, w2, w3, w4 = st.columns(4)
-        m3["westinghouse"]["skill"] = w1.number_input("Skill (Keterampilan)", -0.22, 0.15, float(m3["westinghouse"]["skill"]), step=0.01)
-        m3["westinghouse"]["effort"] = w2.number_input("Effort (Usaha)", -0.17, 0.13, float(m3["westinghouse"]["effort"]), step=0.01)
-        m3["westinghouse"]["condition"] = w3.number_input("Condition (Kondisi)", -0.07, 0.06, float(m3["westinghouse"]["condition"]), step=0.01)
-        m3["westinghouse"]["consistency"] = w4.number_input("Consistency (Konsistensi)", -0.04, 0.04, float(m3["westinghouse"]["consistency"]), step=0.01)
+            st.markdown("##### 2. Penyesuaian Westinghouse & Kelonggaran (Allowance)")
+            w1, w2, w3, w4 = st.columns(4)
+            m3["westinghouse"]["skill"] = w1.number_input("Skill (Keterampilan)", -0.22, 0.15, float(m3["westinghouse"]["skill"]), step=0.01)
+            m3["westinghouse"]["effort"] = w2.number_input("Effort (Usaha)", -0.17, 0.13, float(m3["westinghouse"]["effort"]), step=0.01)
+            m3["westinghouse"]["condition"] = w3.number_input("Condition (Kondisi)", -0.07, 0.06, float(m3["westinghouse"]["condition"]), step=0.01)
+            m3["westinghouse"]["consistency"] = w4.number_input("Consistency (Konsistensi)", -0.04, 0.04, float(m3["westinghouse"]["consistency"]), step=0.01)
 
-        al1, al2, al3 = st.columns(3)
-        m3["allowance_pribadi"] = al1.number_input("Kelonggaran Kebutuhan Pribadi (%)", 0.0, 20.0, float(m3["allowance_pribadi"]), step=0.5)
-        m3["allowance_kelelahan"] = al2.number_input("Kelonggaran Menghilangkan Kelelahan (%)", 0.0, 30.0, float(m3["allowance_kelelahan"]), step=0.5)
-        m3["allowance_hambatan"] = al3.number_input("Kelonggaran Hambatan Tak Terhindarkan (%)", 0.0, 20.0, float(m3["allowance_hambatan"]), step=0.5)
+            al1, al2, al3 = st.columns(3)
+            m3["allowance_pribadi"] = al1.number_input("Kelonggaran Kebutuhan Pribadi (%)", 0.0, 20.0, float(m3["allowance_pribadi"]), step=0.5)
+            m3["allowance_kelelahan"] = al2.number_input("Kelonggaran Menghilangkan Kelelahan (%)", 0.0, 30.0, float(m3["allowance_kelelahan"]), step=0.5)
+            m3["allowance_hambatan"] = al3.number_input("Kelonggaran Hambatan Tak Terhindarkan (%)", 0.0, 20.0, float(m3["allowance_hambatan"]), step=0.5)
 
-        st.markdown("##### 3. Schummard, Tingkat Kesulitan Objektif, dan Penyesuaian Akhir")
-        st.caption("Setiap elemen memiliki skor Schummard (p1 = skor/60), enam skor kesulitan (p2 = 1 + Σ skor/100), "
-                   "dan p akhir manual. Westinghouse berlaku sama untuk seluruh elemen; sesuaikan skor dengan pengamatan.")
-        profile_map = {str(item.get("Kode")): item for item in m3.get("rating_rows", [])}
-        rating_rows = []
-        for item in m3["df_siklus"]:
-            code = str(item.get("Kode", "")).strip()
-            if not code:
-                continue
-            profile = profile_map.get(code, {})
-            rating_rows.append({
-                "Kode": code,
-                "Skor Schummard": float(profile.get("Skor Schummard", 60)),
-                **{key: float(profile.get(key, 0)) for key in ("ABT", "PK", "PT", "KMT", "PERLT", "BB")},
-                "p akhir": float(profile.get("p akhir", 1)),
-            })
-        # Pergantian kode/jumlah elemen harus membangun ulang basis editor.
-        rating_scope = hashlib.sha256("|".join(r["Kode"] for r in rating_rows).encode()).hexdigest()[:10]
-        m3["rating_rows"] = edit_table_rows(
-            st.session_state, rating_rows, f"ed_m3_rating_{rating_scope}", st.data_editor,
-            use_container_width=True, num_rows="fixed", hide_index=True, disabled=["Kode"],
-        ) if rating_rows else []
-        st.caption("ABT: anggota badan terpakai, PK: pedal kaki, PT: penggunaan tangan, "
-                   "KMT: koordinasi mata-tangan, PERLT: peralatan, BB: berat beban. "
-                   "p akhir adalah keputusan praktikan, **bukan rata-rata otomatis** ketiga metode.")
-        method_options = ["Westinghouse", "Schummard", "Objektif", "Akhir (manual)"]
-        current_method = m3.get("metode_terpilih", "Westinghouse")
-        m3["metode_terpilih"] = st.selectbox(
-            "Metode yang digunakan untuk hasil utama, total waktu baku, dan kapasitas:",
-            method_options, index=method_options.index(current_method) if current_method in method_options else 0,
-        )
+            st.markdown("##### 3. Schummard, Tingkat Kesulitan Objektif, dan Penyesuaian Akhir")
+            st.caption("Setiap elemen memiliki skor Schummard (p1 = skor/60), enam skor kesulitan (p2 = 1 + Σ skor/100), "
+                       "dan p akhir manual. Westinghouse berlaku sama untuk seluruh elemen; sesuaikan skor dengan pengamatan.")
+            profile_map = {str(item.get("Kode")): item for item in m3.get("rating_rows", [])}
+            rating_rows = []
+            for item in m3["df_siklus"]:
+                code = str(item.get("Kode", "")).strip()
+                if not code:
+                    continue
+                profile = profile_map.get(code, {})
+                rating_rows.append({
+                    "Kode": code,
+                    "Skor Schummard": float(profile.get("Skor Schummard", 60)),
+                    **{key: float(profile.get(key, 0)) for key in ("ABT", "PK", "PT", "KMT", "PERLT", "BB")},
+                    "p akhir": float(profile.get("p akhir", 1)),
+                })
+            # Pergantian kode/jumlah elemen harus membangun ulang basis editor.
+            rating_scope = hashlib.sha256("|".join(r["Kode"] for r in rating_rows).encode()).hexdigest()[:10]
+            m3["rating_rows"] = edit_table_rows(
+                st.session_state, rating_rows, f"ed_m3_rating_{rating_scope}", st.data_editor,
+                use_container_width=True, num_rows="fixed", hide_index=True, disabled=["Kode"],
+            ) if rating_rows else []
+            st.caption("ABT: anggota badan terpakai, PK: pedal kaki, PT: penggunaan tangan, "
+                       "KMT: koordinasi mata-tangan, PERLT: peralatan, BB: berat beban. "
+                       "p akhir adalah keputusan praktikan, **bukan rata-rata otomatis** ketiga metode.")
+            method_options = ["Westinghouse", "Schummard", "Objektif", "Akhir (manual)"]
+            current_method = m3.get("metode_terpilih", "Westinghouse")
+            m3["metode_terpilih"] = st.selectbox(
+                "Metode yang digunakan untuk hasil utama, total waktu baku, dan kapasitas:",
+                method_options, index=method_options.index(current_method) if current_method in method_options else 0,
+            )
 
-        calc_all = compile_all_calculations()
-        for message in calc_all.get("m3_errors", []):
-            st.error(f"Elemen belum dapat dihitung: {message}")
-        df_res_m3 = pd.DataFrame(calc_all["m3_rows"], columns=[
-            "Kode", "Elemen Kerja", "Ws (dtk)", "SD", "BKB", "BKA",
-            "Uji Keseragaman", "N'", "Uji Kecukupan", "Faktor p", "Allowance (%)", "Wn (dtk)", "Wb (dtk)", "Output Standar (unit/jam)"
-        ])
-        st.markdown("##### 4. Hasil Perhitungan Utama, Waktu Normal, Waktu Baku & Uji Data")
-        st.dataframe(df_res_m3, use_container_width=True, hide_index=True)
+        with step_tabs[1]:
+            calc_all = compile_all_calculations()
+            for message in calc_all.get("m3_errors", []):
+                st.error(f"Elemen belum dapat dihitung: {message}")
+            df_res_m3 = pd.DataFrame(calc_all["m3_rows"], columns=[
+                "Kode", "Elemen Kerja", "Ws (dtk)", "SD", "BKB", "BKA",
+                "Uji Keseragaman", "N'", "Uji Kecukupan", "Faktor p", "Allowance (%)", "Wn (dtk)", "Wb (dtk)", "Output Standar (unit/jam)"
+            ])
+            st.markdown("##### 4. Hasil Perhitungan Utama, Waktu Normal, Waktu Baku & Uji Data")
+            st.dataframe(df_res_m3, use_container_width=True, hide_index=True)
+            with st.expander("Bandingkan empat metode & lihat rumus", expanded=st.session_state["ux_mode"] == "Lanjutan"):
+                st.markdown("##### 5. Perbandingan Empat Metode per Elemen")
+                df_compare = pd.DataFrame(calc_all.get("m3_comparison_rows", []), columns=[
+                    "Kode", "Elemen Kerja", "Metode", "Ws (dtk)", "Faktor p", "Schummard p1",
+                    "Objektif p2", "Total kesulitan", "Allowance (%)", "Wn (dtk)", "Wb (dtk)",
+                    "Output (unit/jam)", "N'", "Uji Kecukupan", "Uji Keseragaman",
+                ])
+                st.dataframe(df_compare, use_container_width=True, hide_index=True)
+                if not df_compare.empty:
+                    recap = df_compare.groupby("Metode", sort=False).agg(
+                        **{"Total Wb (detik)": ("Wb (dtk)", "sum"), "Jumlah elemen": ("Kode", "count")}
+                    ).reset_index()
+                    recap["Kapasitas (unit/jam)"] = 3600 / recap["Total Wb (detik)"].replace(0, np.nan)
+                    st.dataframe(recap, use_container_width=True, hide_index=True)
+                    st.caption("Kapasitas gabungan = 3600 / Σ Wb hanya untuk urutan elemen yang membentuk satu unit produk. "
+                               "Output per elemen tidak boleh dijumlahkan sebagai output produk.")
+                with st.container(border=True):
+                    st.markdown("**🧮 Cara memperoleh faktor penyesuaian**")
+                    st.latex(r"p_{Schummard}=\frac{skor}{60}")
+                    st.latex(r"p_{Objektif}=p_{Schummard}\left(1+\frac{ABT+PK+PT+KMT+PERLT+BB}{100}\right)")
+                    st.latex(r"p_{Westinghouse}=1+skill+effort+condition+consistency")
+                    st.latex(r"W_n=W_s\cdot p; \quad W_b=\frac{W_n}{1-a/100}; \quad Output=\frac{3600}{W_b}")
+                    st.caption("Acuan metode Schummard/Objektif: panduan praktikum Modul 03 (MODUL-1-8.docx). "
+                               "Uji keseragaman memakai batas rata-rata ± k·SD; kecukupan memakai N'.")
+            tidak_cukup = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[8]) or "Belum" in str(r[8])]
+            tidak_seragam = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[6])]
+            if tidak_seragam or tidak_cukup or calc_all.get("m3_errors"):
+                st.error(f"⚠️ **Peringatan Validasi Statistik:** Elemen tidak seragam: {tidak_seragam or 'Tidak ada'} | Elemen belum cukup (N < N'): {tidak_cukup or 'Tidak ada'}. Lakukan pengambilan sampel tambahan atau revisi data ekstrem (outlier).")
+            else:
+                st.success("✅ **Validasi Statistik Time Study:** Seluruh elemen kerja telah **Seragam (dalam batas BKA-BKB)** dan **Cukup (N ≥ N')**.")
 
-        st.markdown("##### 5. Perbandingan Empat Metode per Elemen")
-        df_compare = pd.DataFrame(calc_all.get("m3_comparison_rows", []), columns=[
-            "Kode", "Elemen Kerja", "Metode", "Ws (dtk)", "Faktor p", "Schummard p1",
-            "Objektif p2", "Total kesulitan", "Allowance (%)", "Wn (dtk)", "Wb (dtk)",
-            "Output (unit/jam)", "N'", "Uji Kecukupan", "Uji Keseragaman",
-        ])
-        st.dataframe(df_compare, use_container_width=True, hide_index=True)
-        if not df_compare.empty:
-            recap = df_compare.groupby("Metode", sort=False).agg(
-                **{"Total Wb (detik)": ("Wb (dtk)", "sum"), "Jumlah elemen": ("Kode", "count")}
-            ).reset_index()
-            recap["Kapasitas (unit/jam)"] = 3600 / recap["Total Wb (detik)"].replace(0, np.nan)
-            st.dataframe(recap, use_container_width=True, hide_index=True)
-            st.caption("Kapasitas gabungan = 3600 / Σ Wb hanya untuk urutan elemen yang membentuk satu unit produk. "
-                       "Output per elemen tidak boleh dijumlahkan sebagai output produk.")
-        with st.expander("🧮 Cara memperoleh faktor penyesuaian", expanded=False):
-            st.latex(r"p_{Schummard}=\frac{skor}{60}")
-            st.latex(r"p_{Objektif}=p_{Schummard}\left(1+\frac{ABT+PK+PT+KMT+PERLT+BB}{100}\right)")
-            st.latex(r"p_{Westinghouse}=1+skill+effort+condition+consistency")
-            st.latex(r"W_n=W_s\cdot p; \quad W_b=\frac{W_n}{1-a/100}; \quad Output=\frac{3600}{W_b}")
-            st.caption("Acuan metode Schummard/Objektif: panduan praktikum Modul 03 (MODUL-1-8.docx). "
-                       "Uji keseragaman memakai batas rata-rata ± k·SD; kecukupan memakai N'.")
+            total_wb = df_res_m3["Wb (dtk)"].sum() if not df_res_m3.empty else 0.0
+            if len(df_res_m3) == len(m3["df_siklus"]) and total_wb > 0:
+                st.metric(f"Total Waktu Baku — {m3['metode_terpilih']} (Σ Wb)",
+                          f"{total_wb:.2f} detik/unit", f"Kapasitas: {3600/total_wb:.1f} unit/jam")
+            else:
+                st.warning("Total waktu baku produk belum ditampilkan karena ada elemen tanpa hasil valid.")
 
-        tidak_cukup = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[8]) or "Belum" in str(r[8])]
-        tidak_seragam = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[6])]
-        if tidak_seragam or tidak_cukup or calc_all.get("m3_errors"):
-            st.error(f"⚠️ **Peringatan Validasi Statistik:** Elemen tidak seragam: {tidak_seragam or 'Tidak ada'} | Elemen belum cukup (N < N'): {tidak_cukup or 'Tidak ada'}. Lakukan pengambilan sampel tambahan atau revisi data ekstrem (outlier).")
-        else:
-            st.success("✅ **Validasi Statistik Time Study:** Seluruh elemen kerja telah **Seragam (dalam batas BKA-BKB)** dan **Cukup (N ≥ N')**.")
-
-        total_wb = df_res_m3["Wb (dtk)"].sum() if not df_res_m3.empty else 0.0
-        if len(df_res_m3) == len(m3["df_siklus"]) and total_wb > 0:
-            st.metric(f"Total Waktu Baku — {m3['metode_terpilih']} (Σ Wb)",
-                      f"{total_wb:.2f} detik/unit", f"Kapasitas: {3600/total_wb:.1f} unit/jam")
-        else:
-            st.warning("Total waktu baku produk belum ditampilkan karena ada elemen tanpa hasil valid.")
-        st.session_state["analisis_modul"]["Modul 03"] = st.text_area(
-            "Analisis & Pembahasan Modul 03:", value=st.session_state["analisis_modul"]["Modul 03"]
-        )
+        with step_tabs[2]:
+            st.session_state["analisis_modul"]["Modul 03"] = st.text_area(
+                "Analisis & Pembahasan Modul 03:", value=st.session_state["analisis_modul"]["Modul 03"]
+            )
 
     # --- MODUL 04: ANTROPOMETRI 32 DIMENSI ---
     elif chosen == "Modul 04 - Antropometri 32 Dimensi":
-        st.subheader("📏 Modul 04: Antropometri 32 Dimensi Tubuh, Kurva Gaussian & Database Populasi", anchor="modul-04-antropometri")
-        m4 = st.session_state["modul_04"]
-        m4["df_32"] = edit_table_rows(
-            st.session_state, m4["df_32"], "ed_m4", st.data_editor,
-            use_container_width=True, height=380,
-        )
+        with step_tabs[0]:
+            m4 = st.session_state["modul_04"]
+            m4["df_32"] = edit_table_rows(
+                st.session_state, m4["df_32"], "ed_m4", st.data_editor,
+                use_container_width=True, height=380,
+            )
 
-        calc_all = compile_all_calculations()
-        df_res_m4 = pd.DataFrame(calc_all["m4_rows"], columns=[
-            "Kode", "Nama Dimensi Tubuh", "Mean (cm)", "SD (cm)",
-            "P5 (cm)", "P10 (cm)", "P50 (cm)", "P90 (cm)", "P95 (cm)", "Uji Normalitas (Shapiro-Wilk)", "Aplikasi Desain Stasiun Kerja"
-        ])
-        st.markdown("##### 📊 Hasil Rekapitulasi Persentil & Uji Normalitas 32 Dimensi")
-        st.dataframe(df_res_m4, use_container_width=True, hide_index=True, height=340)
-        st.caption("Data awal merupakan simulasi untuk latihan. Ganti dengan hasil pengukuran sebenarnya sebelum menarik kesimpulan populasi.")
+        with step_tabs[1]:
+            calc_all = compile_all_calculations()
+            df_res_m4 = pd.DataFrame(calc_all["m4_rows"], columns=[
+                "Kode", "Nama Dimensi Tubuh", "Mean (cm)", "SD (cm)",
+                "P5 (cm)", "P10 (cm)", "P50 (cm)", "P90 (cm)", "P95 (cm)", "Uji Normalitas (Shapiro-Wilk)", "Aplikasi Desain Stasiun Kerja"
+            ])
+            st.markdown("##### 📊 Hasil Rekapitulasi Persentil & Uji Normalitas 32 Dimensi")
+            st.dataframe(df_res_m4, use_container_width=True, hide_index=True, height=340)
+            st.caption("Data awal merupakan simulasi untuk latihan. Ganti dengan hasil pengukuran sebenarnya sebelum menarik kesimpulan populasi.")
 
-        st.divider()
-        col_g1, col_g2 = st.columns([1.2, 1.8], gap="large")
-        with col_g1:
-            st.markdown("##### 📈 Visualisasi Kurva Normal (P5, P50, P95)")
-            sel_row = None
-            if calc_all["m4_rows"]:
-                pilihan_dim = st.selectbox("Pilih Dimensi Tubuh:", [f"{r[0]} - {r[1]}" for r in calc_all["m4_rows"]])
-                idx_d = [f"{r[0]} - {r[1]}" for r in calc_all["m4_rows"]].index(pilihan_dim)
-                sel_row = calc_all["m4_rows"][idx_d]
-                st.caption(f"**Acuan Desain:** {sel_row[10]}")
-                st.write(f"- **P5:** `{sel_row[4]} cm` | **P50:** `{sel_row[6]} cm` | **P95:** `{sel_row[8]} cm`")
-            else:
-                st.info("Belum ada dimensi dengan data positif. Isi sampel pengukuran agar grafik dapat ditampilkan.")
-        with col_g2:
-            if sel_row:
-                fig_norm = buat_plot_kurva_normal(sel_row[2], sel_row[3], f"{sel_row[0]} ({sel_row[1]})")
-                if fig_norm:
-                    st.pyplot(fig_norm)
-
-        st.divider()
-        st.markdown("##### 🗄️ Database Antropometri Lokal (SQLite)")
-        st.warning("Database SQLite berada di server aplikasi dan **tidak permanen** pada Streamlit Community Cloud. "
-                   "Data dapat hilang saat server dimulai ulang; gunakan cadangan JSON/Excel. "
-                   "Jangan simpan data pribadi sensitif atau gunakan untuk kesimpulan populasi resmi.")
-        db_col1, db_col2 = st.columns([1, 2])
-        with db_col1:
-            data_sah = st.checkbox("Saya sudah mengganti data simulasi dengan pengukuran nyata dan memahami penyimpanan lokal bersifat sementara.")
-            if st.button("📥 Simpan Data Kelompok ke SQLite Lokal", use_container_width=True, disabled=not data_sah):
-                try:
-                    jml = simpan_ke_database_antropometri(
-                        st.session_state["identitas"]["kelas"],
-                        st.session_state["identitas"]["kelompok"],
-                        m4["df_32"],
-                    )
-                except (ValueError, OSError) as exc:
-                    st.error(f"Data belum disimpan: {exc}")
+            st.divider()
+            col_g1, col_g2 = st.columns([1.2, 1.8], gap="large")
+            with col_g1:
+                st.markdown("##### 📈 Visualisasi Kurva Normal (P5, P50, P95)")
+                sel_row = None
+                if calc_all["m4_rows"]:
+                    pilihan_dim = st.selectbox("Pilih Dimensi Tubuh:", [f"{r[0]} - {r[1]}" for r in calc_all["m4_rows"]])
+                    idx_d = [f"{r[0]} - {r[1]}" for r in calc_all["m4_rows"]].index(pilihan_dim)
+                    sel_row = calc_all["m4_rows"][idx_d]
+                    st.caption(f"**Acuan Desain:** {sel_row[10]}")
+                    st.write(f"- **P5:** `{sel_row[4]} cm` | **P50:** `{sel_row[6]} cm` | **P95:** `{sel_row[8]} cm`")
                 else:
-                    st.success(f"Tersimpan {jml} titik pengukuran pada SQLite lokal. Data lama kelas/kelompok yang sama diganti.")
-        with db_col2:
-            df_pop = ambil_rekap_database_populasi()
-            if not df_pop.empty:
-                st.dataframe(df_pop, use_container_width=True, hide_index=True, height=220)
-            else:
-                st.info("Database lokal masih kosong. Gunakan data pengukuran nyata dan simpan cadangan sebelum keluar.")
+                    st.info("Belum ada dimensi dengan data positif. Isi sampel pengukuran agar grafik dapat ditampilkan.")
+            with col_g2:
+                if sel_row:
+                    fig_norm = buat_plot_kurva_normal(sel_row[2], sel_row[3], f"{sel_row[0]} ({sel_row[1]})")
+                    if fig_norm:
+                        st.pyplot(fig_norm)
 
-        st.session_state["analisis_modul"]["Modul 04"] = st.text_area(
-            "Analisis & Pembahasan Modul 04:", value=st.session_state["analisis_modul"]["Modul 04"]
-        )
+            st.divider()
+
+        with step_tabs[2]:
+            st.session_state["analisis_modul"]["Modul 04"] = st.text_area(
+                "Analisis & Pembahasan Modul 04:", value=st.session_state["analisis_modul"]["Modul 04"]
+            )
+            with st.expander("Penyimpanan populasi SQLite (opsional)", expanded=st.session_state["ux_mode"] == "Lanjutan"):
+                st.markdown("##### 🗄️ Database Antropometri Lokal (SQLite)")
+                st.warning("Database SQLite berada di server aplikasi dan **tidak permanen** pada Streamlit Community Cloud. "
+                           "Data dapat hilang saat server dimulai ulang; gunakan cadangan JSON/Excel. "
+                           "Jangan simpan data pribadi sensitif atau gunakan untuk kesimpulan populasi resmi.")
+                db_col1, db_col2 = st.columns([1, 2])
+                with db_col1:
+                    data_sah = st.checkbox("Saya sudah mengganti data simulasi dengan pengukuran nyata dan memahami penyimpanan lokal bersifat sementara.")
+                    if st.button("📥 Simpan Data Kelompok ke SQLite Lokal", use_container_width=True, disabled=not data_sah):
+                        try:
+                            jml = simpan_ke_database_antropometri(
+                                st.session_state["identitas"]["kelas"],
+                                st.session_state["identitas"]["kelompok"],
+                                m4["df_32"],
+                            )
+                        except (ValueError, OSError) as exc:
+                            st.error(f"Data belum disimpan: {exc}")
+                        else:
+                            st.success(f"Tersimpan {jml} titik pengukuran pada SQLite lokal. Data lama kelas/kelompok yang sama diganti.")
+                with db_col2:
+                    df_pop = ambil_rekap_database_populasi()
+                    if not df_pop.empty:
+                        st.dataframe(df_pop, use_container_width=True, hide_index=True, height=220)
+                    else:
+                        st.info("Database lokal masih kosong. Gunakan data pengukuran nyata dan simpan cadangan sebelum keluar.")
 
     # --- MODUL 05: ANTROPOMETRI LANJUTAN & CAD 2D ---
     elif chosen == "Modul 05 - Antropometri Lanjutan":
-        st.subheader("🪑 Modul 05: Antropometri Lanjutan & Blueprint 2D Stasiun Kerja", anchor="modul-05-antropometri-lanjutan")
-        m5 = st.session_state["modul_05"]
-        m5["df_3dim"] = edit_table_rows(
-            st.session_state, m5["df_3dim"], "ed_m5", st.data_editor,
-            use_container_width=True, num_rows="dynamic",
-        )
+        with step_tabs[0]:
+            m5 = st.session_state["modul_05"]
+            m5["df_3dim"] = edit_table_rows(
+                st.session_state, m5["df_3dim"], "ed_m5", st.data_editor,
+                use_container_width=True, num_rows="dynamic",
+            )
 
-        calc_all = compile_all_calculations()
-        df_res_m5 = pd.DataFrame(calc_all["m5_rows"], columns=[
-            "Dimensi Kunci", "Mean (cm)", "SD (cm)", "BKB (cm)", "BKA (cm)",
-            "Status Keseragaman", "N'", "Status Kecukupan", "Persentil Acuan", "Ukuran Rancangan Final (cm)"
-        ])
-        st.dataframe(df_res_m5, use_container_width=True, hide_index=True)
+        with step_tabs[1]:
+            calc_all = compile_all_calculations()
+            df_res_m5 = pd.DataFrame(calc_all["m5_rows"], columns=[
+                "Dimensi Kunci", "Mean (cm)", "SD (cm)", "BKB (cm)", "BKA (cm)",
+                "Status Keseragaman", "N'", "Status Kecukupan", "Persentil Acuan", "Ukuran Rancangan Final (cm)"
+            ])
+            st.dataframe(df_res_m5, use_container_width=True, hide_index=True)
 
-        if len(calc_all["m5_rows"]) >= 3:
-            st.markdown("##### 📐 Visualisasi Blueprint 2D CAD Stasiun Kerja (Otomatis Mengikuti Ukuran Rancangan Final)")
-            tpd_val = float(calc_all["m5_rows"][0][9])
-            tsd_val = float(calc_all["m5_rows"][1][9])
-            lpd_val = float(calc_all["m5_rows"][2][9])
-            fig_cad = buat_plot_cad_stasiun_kerja(tpd_val, tsd_val, lpd_val)
-            if fig_cad:
-                st.pyplot(fig_cad)
+            if len(calc_all["m5_rows"]) >= 3:
+                st.markdown("##### 📐 Visualisasi Blueprint 2D CAD Stasiun Kerja (Otomatis Mengikuti Ukuran Rancangan Final)")
+                tpd_val = float(calc_all["m5_rows"][0][9])
+                tsd_val = float(calc_all["m5_rows"][1][9])
+                lpd_val = float(calc_all["m5_rows"][2][9])
+                fig_cad = buat_plot_cad_stasiun_kerja(tpd_val, tsd_val, lpd_val)
+                if fig_cad:
+                    st.pyplot(fig_cad)
 
-        st.session_state["analisis_modul"]["Modul 05"] = st.text_area(
-            "Analisis & Pembahasan Modul 05:", value=st.session_state["analisis_modul"]["Modul 05"]
-        )
+        with step_tabs[2]:
+            st.session_state["analisis_modul"]["Modul 05"] = st.text_area(
+                "Analisis & Pembahasan Modul 05:", value=st.session_state["analisis_modul"]["Modul 05"]
+            )
 
     # --- MODUL 06, 07, 08: TIAP LINGKUNGAN MEMILIKI HALAMAN SENDIRI ---
     elif chosen in ("Modul 06 - Temperatur", "Modul 07 - Kebisingan", "Modul 08 - Pencahayaan"):
-        nomor = chosen.split()[1]
-        konfigurasi = {
-            "06": ("🌡️ Modul 06: Temperatur (°C)", "modul_06", [
-                ("dingin_suhu", "Suhu kondisi dingin (°C)", 10.0, 45.0),
-                ("panas_suhu", "Suhu kondisi panas (°C)", 10.0, 50.0),
-            ]),
-            "07": ("🔊 Modul 07: Kebisingan (dBA)", "modul_07", [
-                ("normal_db", "Kebisingan normal (dBA)", 30.0, 120.0),
-                ("bising_db", "Kebisingan saat bising (dBA)", 30.0, 120.0),
-            ]),
-            "08": ("💡 Modul 08: Pencahayaan (lux)", "modul_08", [
-                ("normal_lux", "Cahaya normal (lux)", 1.0, 2000.0),
-                ("gelap_lux", "Cahaya saat redup (lux)", 1.0, 2000.0),
-            ]),
-        }
-        judul, state_key, input_specs = konfigurasi[nomor]
-        data_lingkungan = st.session_state[state_key]
-        st.subheader(judul, anchor=f"modul-{nomor}-lingkungan")
-        st.caption("Tiga percobaan per kondisi. Input dan analisis hanya untuk modul yang sedang dibuka.")
-        cols = st.columns(2, gap="large")
-        for col, (field, label, minimum, maksimum) in zip(cols, input_specs):
-            with col:
-                st.markdown(f"#### {label}")
-                for i in range(3):
-                    data_lingkungan[field][i] = st.number_input(
-                        f"{label} — Percobaan {i + 1}", minimum, maksimum,
-                        float(data_lingkungan[field][i]), key=f"ling_{nomor}_{field}_{i}",
-                    )
+        with step_tabs[0]:
+            nomor = chosen.split()[1]
+            konfigurasi = {
+                "06": ("🌡️ Modul 06: Temperatur (°C)", "modul_06", [
+                    ("dingin_suhu", "Suhu kondisi dingin (°C)", 10.0, 45.0),
+                    ("panas_suhu", "Suhu kondisi panas (°C)", 10.0, 50.0),
+                ]),
+                "07": ("🔊 Modul 07: Kebisingan (dBA)", "modul_07", [
+                    ("normal_db", "Kebisingan normal (dBA)", 30.0, 120.0),
+                    ("bising_db", "Kebisingan saat bising (dBA)", 30.0, 120.0),
+                ]),
+                "08": ("💡 Modul 08: Pencahayaan (lux)", "modul_08", [
+                    ("normal_lux", "Cahaya normal (lux)", 1.0, 2000.0),
+                    ("gelap_lux", "Cahaya saat redup (lux)", 1.0, 2000.0),
+                ]),
+            }
+            judul, state_key, input_specs = konfigurasi[nomor]
+            data_lingkungan = st.session_state[state_key]
+            st.caption("Tiga percobaan per kondisi. Input dan analisis hanya untuk modul yang sedang dibuka.")
+            cols = st.columns(2, gap="large")
+            for col, (field, label, minimum, maksimum) in zip(cols, input_specs):
+                with col:
+                    st.markdown(f"#### {label}")
+                    for i in range(3):
+                        data_lingkungan[field][i] = st.number_input(
+                            f"{label} — Percobaan {i + 1}", minimum, maksimum,
+                            float(data_lingkungan[field][i]), key=f"ling_{nomor}_{field}_{i}",
+                        )
 
-        hasil = compile_all_calculations()["env_rows"][int(nomor) - 6]
-        df_env = pd.DataFrame([hasil], columns=[
-            "Modul", "Parameter Uji", "Mean Kondisi 1", "Mean Kondisi 2",
-            "Selisih", "Acuan Perbandingan Praktikum", "p-value (Uji-t)",
-            "Kesimpulan Statistik", "Analisis & Rekomendasi",
-        ])
-        st.markdown("#### 📊 Hasil Perhitungan dan Perbandingan Kondisi")
-        st.dataframe(df_env, use_container_width=True, hide_index=True)
-        if nomor == "06":
-            st.caption("Suhu 28°C hanyalah pembanding latihan; penilaian iklim kerja resmi memerlukan ISBB, beban kerja, serta waktu kerja-istirahat.")
-            mean_value = float(np.mean(data_lingkungan["panas_suhu"]))
-            batas = data_lingkungan["nab_suhu"]
-            if mean_value > batas:
-                st.warning(f"Suhu rata-rata {mean_value:.1f}°C melampaui acuan latihan {batas}°C; belum berarti melampaui NAB ISBB.")
-        elif nomor == "07":
-            st.caption("Acuan 85 dBA terkait pajanan ekuivalen 8 jam, bukan hanya tiga pembacaan sesaat.")
-            mean_value = float(np.mean(data_lingkungan["bising_db"]))
-            batas = data_lingkungan["nab_db"]
-            if mean_value > batas:
-                st.warning(f"Rerata bacaan {mean_value:.1f} dBA di atas acuan {batas} dBA; ukur pajanan ekuivalen sebelum menyimpulkan kepatuhan.")
-        else:
-            st.caption("Standar pencahayaan perlu disesuaikan dengan jenis pekerjaan dan area pengukuran.")
-            mean_value = float(np.mean(data_lingkungan["gelap_lux"]))
-            batas = data_lingkungan["standar_lux"]
-            if mean_value < batas:
-                st.warning(f"Rerata pencahayaan redup {mean_value:.1f} lux di bawah acuan tugas {batas} lux.")
-        st.caption("Rujukan umum: [Permenaker No. 5 Tahun 2018](https://jdih.kemnaker.go.id/peraturan/detail/1546/peraturan-menteri-nomor-5-).")
-        kunci_analisis = f"Modul {nomor}"
-        st.session_state["analisis_modul"][kunci_analisis] = st.text_area(
-            f"Analisis & Pembahasan Modul {nomor}:",
-            value=st.session_state["analisis_modul"][kunci_analisis],
-        )
+        with step_tabs[1]:
+            hasil = compile_all_calculations()["env_rows"][int(nomor) - 6]
+            df_env = pd.DataFrame([hasil], columns=[
+                "Modul", "Parameter Uji", "Mean Kondisi 1", "Mean Kondisi 2",
+                "Selisih", "Acuan Perbandingan Praktikum", "p-value (Uji-t)",
+                "Kesimpulan Statistik", "Analisis & Rekomendasi",
+            ])
+            st.markdown("#### 📊 Hasil Perhitungan dan Perbandingan Kondisi")
+            st.dataframe(df_env, use_container_width=True, hide_index=True)
+            if nomor == "06":
+                st.caption("Suhu 28°C hanyalah pembanding latihan; penilaian iklim kerja resmi memerlukan ISBB, beban kerja, serta waktu kerja-istirahat.")
+                mean_value = float(np.mean(data_lingkungan["panas_suhu"]))
+                batas = data_lingkungan["nab_suhu"]
+                if mean_value > batas:
+                    st.warning(f"Suhu rata-rata {mean_value:.1f}°C melampaui acuan latihan {batas}°C; belum berarti melampaui NAB ISBB.")
+            elif nomor == "07":
+                st.caption("Acuan 85 dBA terkait pajanan ekuivalen 8 jam, bukan hanya tiga pembacaan sesaat.")
+                mean_value = float(np.mean(data_lingkungan["bising_db"]))
+                batas = data_lingkungan["nab_db"]
+                if mean_value > batas:
+                    st.warning(f"Rerata bacaan {mean_value:.1f} dBA di atas acuan {batas} dBA; ukur pajanan ekuivalen sebelum menyimpulkan kepatuhan.")
+            else:
+                st.caption("Standar pencahayaan perlu disesuaikan dengan jenis pekerjaan dan area pengukuran.")
+                mean_value = float(np.mean(data_lingkungan["gelap_lux"]))
+                batas = data_lingkungan["standar_lux"]
+                if mean_value < batas:
+                    st.warning(f"Rerata pencahayaan redup {mean_value:.1f} lux di bawah acuan tugas {batas} lux.")
+            st.caption("Rujukan umum: [Permenaker No. 5 Tahun 2018](https://jdih.kemnaker.go.id/peraturan/detail/1546/peraturan-menteri-nomor-5-).")
+
+        with step_tabs[2]:
+            kunci_analisis = f"Modul {nomor}"
+            st.session_state["analisis_modul"][kunci_analisis] = st.text_area(
+                f"Analisis & Pembahasan Modul {nomor}:",
+                value=st.session_state["analisis_modul"][kunci_analisis],
+            )
 
     # --- MODUL 09: MANUAL MATERIAL HANDLING ---
     elif chosen == "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)":
-        st.subheader("📦 Modul 09: Manual Material Handling (NIOSH Equation, Snook Tables & Biomekanika L5/S1)", anchor="modul-09-mmh")
         m9 = st.session_state["modul_09"]
 
-        tab_n, tab_s, tab_b, tab_sim = st.tabs([
-            "1️⃣ NIOSH (RWL & LI)", "2️⃣ Snook & Ciriello", "3️⃣ Biomekanika L5/S1",
-            "4️⃣ Simulasi Perbaikan",
-        ])
-
-        with tab_n:
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                m9["h_cm"] = st.number_input("Jarak Horizontal H (cm)", 15.0, 80.0, float(m9["h_cm"]))
-                m9["v_cm"] = st.number_input("Tinggi Vertikal Awal V (cm)", 0.0, 175.0, float(m9["v_cm"]))
-            with c2:
-                m9["d_cm"] = st.number_input("Jarak Angkat Vertikal D (cm)", 25.0, 175.0, float(m9["d_cm"]))
-                m9["a_deg"] = st.number_input("Sudut Asimetri A (°)", 0.0, 135.0, float(m9["a_deg"]))
-            with c3:
-                m9["f_lift"] = st.number_input("Frekuensi Angkat F (kali/menit)", 0.2, 12.0, float(m9["f_lift"]))
-                durasi_options = ["≤ 1 jam", "> 1–2 jam", "> 2–8 jam"]
-                if st.session_state.get("_ui_m9_durasi") not in durasi_options:
-                    saved_duration = m9.get("durasi_angkat", "≤ 1 jam")
-                    st.session_state["_ui_m9_durasi"] = saved_duration if saved_duration in durasi_options else durasi_options[0]
-                m9["durasi_angkat"] = st.selectbox(
-                    "Durasi Total Aktivitas Angkat",
-                    durasi_options,
-                    key="_ui_m9_durasi",
-                )
-                coupling_options = ["Baik (Good)", "Sedang (Fair)", "Buruk (Poor)"]
-                if st.session_state.get("_ui_m9_coupling") not in coupling_options:
-                    saved_coupling = m9.get("coupling", "Sedang (Fair)")
-                    st.session_state["_ui_m9_coupling"] = saved_coupling if saved_coupling in coupling_options else coupling_options[1]
-                m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", coupling_options, key="_ui_m9_coupling")
-                m9["berat_beban"] = st.number_input("Berat Beban Aktual L (kg)", 1.0, 60.0, float(m9["berat_beban"]))
-
-            res_n = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"], m9["durasi_angkat"])
-            k1, k2, k3 = st.columns(3)
-            k1.metric("Recommended Weight Limit (RWL)", f"{res_n['rwl']} kg")
-            k2.metric("Lifting Index (LI)", str(res_n["li"]) if res_n["li"] is not None else "Tidak terdefinisi")
-            k3.metric("Kategori Risiko NIOSH", res_n["kategori"])
-            if res_n["li"] is None:
-                st.error("RWL = 0 pada kombinasi parameter ini; persamaan NIOSH tidak menghasilkan nilai LI yang valid.")
-            st.caption("Model RNLE untuk satu tugas mengangkat dengan dua tangan; bukan untuk dorong/tarik, "
-                       "mengangkat satu tangan, atau lingkungan dan kondisi kerja di luar batas model. "
-                       "FM mengikuti tabel frekuensi × durasi × tinggi tangan (NIOSH).")
-            st.caption("Rujukan: [CDC/NIOSH Revised Lifting Equation](https://www.cdc.gov/niosh/ergonomics/about/rnle.html).")
-            st.caption(f"Faktor Pengali: HM={res_n['hm']} | VM={res_n['vm']} | DM={res_n['dm']} | AM={res_n['am']} | FM={res_n['fm']} | CM={res_n['cm']}")
-            st.info(f"**Rekomendasi Perbaikan:** {res_n['rekomendasi']}")
-
-            # Keterunutan Rumus (Traceability) yang diperbaiki
-            with st.expander("🔍 Lihat Penelusuran Rumus & Substitusi NIOSH"):
-                formula_teks = (
-                    "Rumus Dasar: RWL = LC x HM x VM x DM x AM x FM x CM\n"
-                    f"Substitusi Angka: 23 x {res_n['hm']} x {res_n['vm']} x {res_n['dm']} x {res_n['am']} x {res_n['fm']} x {res_n['cm']}\n"
-                    f"Hasil Akhir RWL: {res_n['rwl']} kg\n"
-                    f"Lifting Index (LI): Beban Aktual ({m9['berat_beban']}) / RWL ({res_n['rwl']}) = {res_n['li']}"
-                )
-                st.text(formula_teks)
-
-        with tab_s:
-            sc1, sc2, sc3 = st.columns(3)
-            aktivitas_options = ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"]
-            jk_options = ["Laki-laki", "Perempuan"]
-            persentil_options = ["P90", "P75", "P50"]
-            for field, options, fallback in (("snook_aktivitas", aktivitas_options, "Angkat (Lifting)"),
-                                             ("snook_jk", jk_options, "Laki-laki"),
-                                             ("snook_persentil", persentil_options, "P75")):
-                widget_key = f"_ui_{field}"
-                if st.session_state.get(widget_key) not in options:
-                    saved = m9.get(field, fallback)
-                    st.session_state[widget_key] = saved if saved in options else fallback
-            m9["snook_aktivitas"] = sc1.selectbox("Jenis Aktivitas MMH", aktivitas_options, key="_ui_snook_aktivitas")
-            m9["snook_jk"] = sc2.selectbox("Populasi Pekerja", jk_options, key="_ui_snook_jk")
-            m9["snook_persentil"] = sc3.selectbox("Target Persentil Populasi", persentil_options, key="_ui_snook_persentil")
-            res_s = hitung_snook_table(m9["snook_aktivitas"], m9["snook_jk"], m9["snook_persentil"], m9["berat_beban"])
-            st.metric("Contoh Batas Ilustratif (bukan tabel Snook resmi)", f"{res_s['batas_snook_kg']} kg", res_s["status"])
-            st.warning("Angka ini hanya **simulasi edukatif**, bukan hasil tabel Liberty Mutual/Snook & Ciriello yang tervalidasi. "
-                       "Penilaian riil memerlukan tinggi tangan, frekuensi, jarak perpindahan, dan gaya dorong/tarik (N), "
-                       "serta tabel sesuai aktivitas. Jangan gunakan angka simulasi sebagai keputusan K3.")
-
-        with tab_b:
-            bc1, bc2 = st.columns(2)
-            m9["bb_pekerja"] = bc1.number_input("Berat Badan Operator (kg)", 40.0, 120.0, float(m9["bb_pekerja"]))
-            m9["sudut_punggung"] = bc2.slider("Sudut Membungkuk / Fleksi Punggung (°)", 0.0, 90.0, float(m9["sudut_punggung"]))
-            res_b = hitung_biomekanika_l5s1(m9["bb_pekerja"], m9["berat_beban"], m9["sudut_punggung"], m9["h_cm"])
-            bm1, bm2 = st.columns(2)
-            bm1.metric("Momen Gaya pada L5/S1", f"{res_b['momen_nm']} Nm")
-            bm2.metric("Estimasi Kompresi L5/S1", f"{res_b['f_kompresi_n']} N", res_b["kategori"])
-            st.caption("Model biomekanika dua dimensi yang disederhanakan; tidak menggantikan analisis dinamis atau pemeriksaan K3 profesional.")
-
-        with tab_sim:
-            st.markdown("#### Bandingkan kondisi angkat saat ini dengan usulan perbaikan")
-            st.caption(
-                "Ubah jarak beban, tinggi tangan, frekuensi, atau berat beban untuk melihat "
-                "bagaimana RWL dan LI berubah. Skenario ini tidak mengubah data pengamatan utama."
-            )
-            sim = st.session_state.setdefault("modul_09_simulasi", {
-                "h_cm": 25.0, "v_cm": 75.0, "d_cm": 45.0, "a_deg": 0.0,
-                "f_lift": 1.0, "durasi_angkat": "≤ 1 jam",
-                "coupling": "Baik (Good)", "berat_beban": 12.0,
-            })
-            for field, saved in sim.items():
-                st.session_state.setdefault(f"_ui_sim_{field}", saved)
-
-            with st.container(border=True):
-                st.markdown("**Parameter usulan (skenario latihan)**")
-                sc1, sc2 = st.columns(2)
-                with sc1:
-                    sim["h_cm"] = st.number_input("Usulan H — jarak horizontal (cm)", min_value=15.0,
-                        max_value=80.0, step=1.0, key="_ui_sim_h_cm")
-                    sim["v_cm"] = st.number_input("Usulan V — tinggi awal (cm)", min_value=0.0,
-                        max_value=175.0, step=1.0, key="_ui_sim_v_cm")
-                    sim["d_cm"] = st.number_input("Usulan D — perpindahan vertikal (cm)", min_value=25.0,
-                        max_value=175.0, step=1.0, key="_ui_sim_d_cm")
-                    sim["a_deg"] = st.number_input("Usulan A — sudut asimetri (°)", min_value=0.0,
-                        max_value=135.0, step=5.0, key="_ui_sim_a_deg")
-                with sc2:
-                    sim["f_lift"] = st.number_input("Usulan F — angkatan/menit", min_value=0.2,
-                        max_value=12.0, step=0.2, key="_ui_sim_f_lift")
-                    sim["berat_beban"] = st.number_input("Usulan berat beban (kg)", min_value=1.0,
-                        max_value=60.0, step=1.0, key="_ui_sim_berat_beban")
-                    sim["durasi_angkat"] = st.selectbox("Usulan durasi angkat", durasi_options,
-                        key="_ui_sim_durasi_angkat")
-                    sim["coupling"] = st.selectbox("Usulan kualitas genggaman", coupling_options,
-                        key="_ui_sim_coupling")
-
-            komparasi = bandingkan_skenario_niosh(m9, sim)
-            awal, usulan = komparasi["awal"], komparasi["usulan"]
-            km1, km2, km3 = st.columns(3)
-            km1.metric("LI kondisi awal", f"{awal['li']:.3f}" if awal["li"] is not None else "Tidak valid")
-            km2.metric("LI usulan", f"{usulan['li']:.3f}" if usulan["li"] is not None else "Tidak valid")
-            km3.metric("Perubahan indikator LI", (
-                f"Turun {komparasi['perubahan_li_pct']:.1f}%" if komparasi["perubahan_li_pct"] is not None
-                and komparasi["perubahan_li_pct"] >= 0 else
-                f"Naik {-komparasi['perubahan_li_pct']:.1f}%" if komparasi["perubahan_li_pct"] is not None
-                else "Tidak dapat dihitung"
-            ))
-            if awal["li"] is None or usulan["li"] is None:
-                st.error(komparasi["status"])
-            elif komparasi["perubahan_li_pct"] > 0:
-                st.success(komparasi["status"])
-            else:
-                st.warning(komparasi["status"])
-            st.caption(
-                "Target LI ≤ 1 adalah acuan evaluasi NIOSH, bukan jaminan bebas cedera. "
-                "Persentase di atas adalah perubahan angka LI, bukan persentase penurunan risiko cedera."
-            )
-
-            labels_sim = [
-                ("h_cm", "H (cm)"), ("v_cm", "V (cm)"), ("d_cm", "D (cm)"),
-                ("a_deg", "A (°)"), ("f_lift", "F (kali/menit)"),
-                ("berat_beban", "Beban (kg)"), ("durasi_angkat", "Durasi"),
-                ("coupling", "Genggaman"),
-            ]
-            rows_sim = [
-                {"Parameter": label, "Kondisi awal": m9[field], "Usulan": sim[field]}
-                for field, label in labels_sim
-            ]
-            rows_sim.extend([
-                {"Parameter": "RWL (kg)", "Kondisi awal": awal["rwl"], "Usulan": usulan["rwl"]},
-                {"Parameter": "LI", "Kondisi awal": awal["li"], "Usulan": usulan["li"]},
-                {"Parameter": "Kategori", "Kondisi awal": awal["kategori"], "Usulan": usulan["kategori"]},
+        with step_tabs[0]:
+            tab_n, tab_s, tab_b, tab_sim = st.tabs([
+                "1️⃣ NIOSH (RWL & LI)", "2️⃣ Snook & Ciriello", "3️⃣ Biomekanika L5/S1",
+                "4️⃣ Simulasi Perbaikan",
             ])
-            df_sim = pd.DataFrame(rows_sim)
-            for col in ("Kondisi awal", "Usulan"):
-                df_sim[col] = df_sim[col].map(lambda value: "—" if value is None else str(value))
-            st.dataframe(df_sim, use_container_width=True, hide_index=True)
-            st.download_button(
-                "⬇️ Unduh perbandingan skenario (.csv)",
-                data=df_sim.to_csv(index=False).encode("utf-8-sig"),
-                file_name="Simulasi_Perbaikan_NIOSH.csv",
-                mime="text/csv", use_container_width=True,
+
+            with tab_n:
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    m9["h_cm"] = st.number_input("Jarak Horizontal H (cm)", 15.0, 80.0, float(m9["h_cm"]))
+                    m9["v_cm"] = st.number_input("Tinggi Vertikal Awal V (cm)", 0.0, 175.0, float(m9["v_cm"]))
+                with c2:
+                    m9["d_cm"] = st.number_input("Jarak Angkat Vertikal D (cm)", 25.0, 175.0, float(m9["d_cm"]))
+                    m9["a_deg"] = st.number_input("Sudut Asimetri A (°)", 0.0, 135.0, float(m9["a_deg"]))
+                with c3:
+                    m9["f_lift"] = st.number_input("Frekuensi Angkat F (kali/menit)", 0.2, 12.0, float(m9["f_lift"]))
+                    durasi_options = ["≤ 1 jam", "> 1–2 jam", "> 2–8 jam"]
+                    if st.session_state.get("_ui_m9_durasi") not in durasi_options:
+                        saved_duration = m9.get("durasi_angkat", "≤ 1 jam")
+                        st.session_state["_ui_m9_durasi"] = saved_duration if saved_duration in durasi_options else durasi_options[0]
+                    m9["durasi_angkat"] = st.selectbox(
+                        "Durasi Total Aktivitas Angkat",
+                        durasi_options,
+                        key="_ui_m9_durasi",
+                    )
+                    coupling_options = ["Baik (Good)", "Sedang (Fair)", "Buruk (Poor)"]
+                    if st.session_state.get("_ui_m9_coupling") not in coupling_options:
+                        saved_coupling = m9.get("coupling", "Sedang (Fair)")
+                        st.session_state["_ui_m9_coupling"] = saved_coupling if saved_coupling in coupling_options else coupling_options[1]
+                    m9["coupling"] = st.selectbox("Kualitas Genggaman (Coupling)", coupling_options, key="_ui_m9_coupling")
+                    m9["berat_beban"] = st.number_input("Berat Beban Aktual L (kg)", 1.0, 60.0, float(m9["berat_beban"]))
+
+                res_n = hitung_niosh_lifting(m9["h_cm"], m9["v_cm"], m9["d_cm"], m9["a_deg"], m9["f_lift"], m9["coupling"], m9["berat_beban"], m9["durasi_angkat"])
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Recommended Weight Limit (RWL)", f"{res_n['rwl']} kg")
+                k2.metric("Lifting Index (LI)", str(res_n["li"]) if res_n["li"] is not None else "Tidak terdefinisi")
+                k3.metric("Kategori Risiko NIOSH", res_n["kategori"])
+                if res_n["li"] is None:
+                    st.error("RWL = 0 pada kombinasi parameter ini; persamaan NIOSH tidak menghasilkan nilai LI yang valid.")
+                st.caption("Model RNLE untuk satu tugas mengangkat dengan dua tangan; bukan untuk dorong/tarik, "
+                           "mengangkat satu tangan, atau lingkungan dan kondisi kerja di luar batas model. "
+                           "FM mengikuti tabel frekuensi × durasi × tinggi tangan (NIOSH).")
+                st.caption("Rujukan: [CDC/NIOSH Revised Lifting Equation](https://www.cdc.gov/niosh/ergonomics/about/rnle.html).")
+                st.caption(f"Faktor Pengali: HM={res_n['hm']} | VM={res_n['vm']} | DM={res_n['dm']} | AM={res_n['am']} | FM={res_n['fm']} | CM={res_n['cm']}")
+                st.info(f"**Rekomendasi Perbaikan:** {res_n['rekomendasi']}")
+
+                # Keterunutan Rumus (Traceability) yang diperbaiki
+                with st.expander("🔍 Lihat Penelusuran Rumus & Substitusi NIOSH"):
+                    formula_teks = (
+                        "Rumus Dasar: RWL = LC x HM x VM x DM x AM x FM x CM\n"
+                        f"Substitusi Angka: 23 x {res_n['hm']} x {res_n['vm']} x {res_n['dm']} x {res_n['am']} x {res_n['fm']} x {res_n['cm']}\n"
+                        f"Hasil Akhir RWL: {res_n['rwl']} kg\n"
+                        f"Lifting Index (LI): Beban Aktual ({m9['berat_beban']}) / RWL ({res_n['rwl']}) = {res_n['li']}"
+                    )
+                    st.text(formula_teks)
+
+            with tab_s:
+                sc1, sc2, sc3 = st.columns(3)
+                aktivitas_options = ["Angkat (Lifting)", "Dorong (Pushing)", "Tarik (Pulling)"]
+                jk_options = ["Laki-laki", "Perempuan"]
+                persentil_options = ["P90", "P75", "P50"]
+                for field, options, fallback in (("snook_aktivitas", aktivitas_options, "Angkat (Lifting)"),
+                                                 ("snook_jk", jk_options, "Laki-laki"),
+                                                 ("snook_persentil", persentil_options, "P75")):
+                    widget_key = f"_ui_{field}"
+                    if st.session_state.get(widget_key) not in options:
+                        saved = m9.get(field, fallback)
+                        st.session_state[widget_key] = saved if saved in options else fallback
+                m9["snook_aktivitas"] = sc1.selectbox("Jenis Aktivitas MMH", aktivitas_options, key="_ui_snook_aktivitas")
+                m9["snook_jk"] = sc2.selectbox("Populasi Pekerja", jk_options, key="_ui_snook_jk")
+                m9["snook_persentil"] = sc3.selectbox("Target Persentil Populasi", persentil_options, key="_ui_snook_persentil")
+                res_s = hitung_snook_table(m9["snook_aktivitas"], m9["snook_jk"], m9["snook_persentil"], m9["berat_beban"])
+                st.metric("Contoh Batas Ilustratif (bukan tabel Snook resmi)", f"{res_s['batas_snook_kg']} kg", res_s["status"])
+                st.warning("Angka ini hanya **simulasi edukatif**, bukan hasil tabel Liberty Mutual/Snook & Ciriello yang tervalidasi. "
+                           "Penilaian riil memerlukan tinggi tangan, frekuensi, jarak perpindahan, dan gaya dorong/tarik (N), "
+                           "serta tabel sesuai aktivitas. Jangan gunakan angka simulasi sebagai keputusan K3.")
+
+            with tab_b:
+                bc1, bc2 = st.columns(2)
+                m9["bb_pekerja"] = bc1.number_input("Berat Badan Operator (kg)", 40.0, 120.0, float(m9["bb_pekerja"]))
+                m9["sudut_punggung"] = bc2.slider("Sudut Membungkuk / Fleksi Punggung (°)", 0.0, 90.0, float(m9["sudut_punggung"]))
+                res_b = hitung_biomekanika_l5s1(m9["bb_pekerja"], m9["berat_beban"], m9["sudut_punggung"], m9["h_cm"])
+                bm1, bm2 = st.columns(2)
+                bm1.metric("Momen Gaya pada L5/S1", f"{res_b['momen_nm']} Nm")
+                bm2.metric("Estimasi Kompresi L5/S1", f"{res_b['f_kompresi_n']} N", res_b["kategori"])
+                st.caption("Model biomekanika dua dimensi yang disederhanakan; tidak menggantikan analisis dinamis atau pemeriksaan K3 profesional.")
+
+            with tab_sim:
+                st.markdown("#### Bandingkan kondisi angkat saat ini dengan usulan perbaikan")
+                st.caption(
+                    "Ubah jarak beban, tinggi tangan, frekuensi, atau berat beban untuk melihat "
+                    "bagaimana RWL dan LI berubah. Skenario ini tidak mengubah data pengamatan utama."
+                )
+                sim = st.session_state.setdefault("modul_09_simulasi", {
+                    "h_cm": 25.0, "v_cm": 75.0, "d_cm": 45.0, "a_deg": 0.0,
+                    "f_lift": 1.0, "durasi_angkat": "≤ 1 jam",
+                    "coupling": "Baik (Good)", "berat_beban": 12.0,
+                })
+                for field, saved in sim.items():
+                    st.session_state.setdefault(f"_ui_sim_{field}", saved)
+
+                with st.container(border=True):
+                    st.markdown("**Parameter usulan (skenario latihan)**")
+                    sc1, sc2 = st.columns(2)
+                    with sc1:
+                        sim["h_cm"] = st.number_input("Usulan H — jarak horizontal (cm)", min_value=15.0,
+                            max_value=80.0, step=1.0, key="_ui_sim_h_cm")
+                        sim["v_cm"] = st.number_input("Usulan V — tinggi awal (cm)", min_value=0.0,
+                            max_value=175.0, step=1.0, key="_ui_sim_v_cm")
+                        sim["d_cm"] = st.number_input("Usulan D — perpindahan vertikal (cm)", min_value=25.0,
+                            max_value=175.0, step=1.0, key="_ui_sim_d_cm")
+                        sim["a_deg"] = st.number_input("Usulan A — sudut asimetri (°)", min_value=0.0,
+                            max_value=135.0, step=5.0, key="_ui_sim_a_deg")
+                    with sc2:
+                        sim["f_lift"] = st.number_input("Usulan F — angkatan/menit", min_value=0.2,
+                            max_value=12.0, step=0.2, key="_ui_sim_f_lift")
+                        sim["berat_beban"] = st.number_input("Usulan berat beban (kg)", min_value=1.0,
+                            max_value=60.0, step=1.0, key="_ui_sim_berat_beban")
+                        sim["durasi_angkat"] = st.selectbox("Usulan durasi angkat", durasi_options,
+                            key="_ui_sim_durasi_angkat")
+                        sim["coupling"] = st.selectbox("Usulan kualitas genggaman", coupling_options,
+                            key="_ui_sim_coupling")
+
+                komparasi = bandingkan_skenario_niosh(m9, sim)
+                awal, usulan = komparasi["awal"], komparasi["usulan"]
+                km1, km2, km3 = st.columns(3)
+                km1.metric("LI kondisi awal", f"{awal['li']:.3f}" if awal["li"] is not None else "Tidak valid")
+                km2.metric("LI usulan", f"{usulan['li']:.3f}" if usulan["li"] is not None else "Tidak valid")
+                km3.metric("Perubahan indikator LI", (
+                    f"Turun {komparasi['perubahan_li_pct']:.1f}%" if komparasi["perubahan_li_pct"] is not None
+                    and komparasi["perubahan_li_pct"] >= 0 else
+                    f"Naik {-komparasi['perubahan_li_pct']:.1f}%" if komparasi["perubahan_li_pct"] is not None
+                    else "Tidak dapat dihitung"
+                ))
+                if awal["li"] is None or usulan["li"] is None:
+                    st.error(komparasi["status"])
+                elif komparasi["perubahan_li_pct"] > 0:
+                    st.success(komparasi["status"])
+                else:
+                    st.warning(komparasi["status"])
+                st.caption(
+                    "Target LI ≤ 1 adalah acuan evaluasi NIOSH, bukan jaminan bebas cedera. "
+                    "Persentase di atas adalah perubahan angka LI, bukan persentase penurunan risiko cedera."
+                )
+
+                labels_sim = [
+                    ("h_cm", "H (cm)"), ("v_cm", "V (cm)"), ("d_cm", "D (cm)"),
+                    ("a_deg", "A (°)"), ("f_lift", "F (kali/menit)"),
+                    ("berat_beban", "Beban (kg)"), ("durasi_angkat", "Durasi"),
+                    ("coupling", "Genggaman"),
+                ]
+                rows_sim = [
+                    {"Parameter": label, "Kondisi awal": m9[field], "Usulan": sim[field]}
+                    for field, label in labels_sim
+                ]
+                rows_sim.extend([
+                    {"Parameter": "RWL (kg)", "Kondisi awal": awal["rwl"], "Usulan": usulan["rwl"]},
+                    {"Parameter": "LI", "Kondisi awal": awal["li"], "Usulan": usulan["li"]},
+                    {"Parameter": "Kategori", "Kondisi awal": awal["kategori"], "Usulan": usulan["kategori"]},
+                ])
+                df_sim = pd.DataFrame(rows_sim)
+                for col in ("Kondisi awal", "Usulan"):
+                    df_sim[col] = df_sim[col].map(lambda value: "—" if value is None else str(value))
+                st.dataframe(df_sim, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "⬇️ Unduh perbandingan skenario (.csv)",
+                    data=df_sim.to_csv(index=False).encode("utf-8-sig"),
+                    file_name="Simulasi_Perbaikan_NIOSH.csv",
+                    mime="text/csv", use_container_width=True,
+                )
+
+        with step_tabs[1]:
+            st.markdown("#### Ringkasan hasil tiga pendekatan")
+            a, b, c = st.columns(3)
+            a.metric("NIOSH · RWL", f"{res_n['rwl']} kg")
+            b.metric("NIOSH · LI", f"{res_n['li']}" if res_n["li"] is not None else "Tidak terdefinisi")
+            c.metric("Biomekanika · L5/S1", f"{res_b['f_kompresi_n']} N")
+            st.info(f"**Evaluasi NIOSH:** {res_n['kategori']}. {res_n['rekomendasi']}")
+            st.warning("Perhitungan Snook di sini hanya ilustrasi untuk belajar; bukan tabel ergonomi resmi dan tidak boleh dipakai sebagai keputusan K3.")
+
+        with step_tabs[2]:
+            st.session_state["analisis_modul"]["Modul 09"] = st.text_area(
+                "Analisis & Pembahasan Modul 09:", value=st.session_state["analisis_modul"]["Modul 09"]
             )
 
-        st.session_state["analisis_modul"]["Modul 09"] = st.text_area(
-            "Analisis & Pembahasan Modul 09:", value=st.session_state["analisis_modul"]["Modul 09"]
-        )
+    with step_tabs[3]:
+        st.markdown("#### Selesaikan praktikum dan simpan hasil")
+        st.caption("Pahami langkah perhitungan, periksa hasil, lalu tandai progres modul."
+                   " Gunakan menu Laporan untuk ekspor dan cadangan proyek.")
+        with st.expander("🧮 Penelusuran rumus, contoh hitung & bahan belajar", expanded=st.session_state["ux_mode"] == "Pemula"):
+            module_number = st.session_state["_active_page_slug"].split("-")[-1]
+            lesson = LESSONS[module_number]
+            st.write(lesson[1])
+            try:
+                for step in worked_example(module_number, st.session_state):
+                    st.code(step, language=None)
+            except (ValueError, TypeError, ZeroDivisionError) as exc:
+                st.warning(f"Penelusuran belum dapat dihitung: {exc}")
+            st.info("Latihan: " + lesson[2])
+            st.caption(lesson[3])
 
-    with st.expander("🧮 Penelusuran rumus, contoh hitung & bahan belajar", expanded=False):
-        module_number = st.session_state["_active_page_slug"].split("-")[-1]
-        lesson = LESSONS[module_number]
-        st.write(lesson[1])
-        try:
-            for step in worked_example(module_number, st.session_state):
-                st.code(step, language=None)
-        except (ValueError, TypeError, ZeroDivisionError) as exc:
-            st.warning(f"Penelusuran belum dapat dihitung: {exc}")
-        st.info("Latihan: " + lesson[2])
-        st.caption(lesson[3])
-
-    slug = st.session_state["_active_page_slug"]
-    checked = st.checkbox("✅ Tandai modul ini selesai setelah data dan hasil diperiksa",
-                          value=bool(st.session_state["module_done"].get(slug, False)), key=f"done_{slug}")
-    st.session_state["module_done"][slug] = checked
+        slug = st.session_state["_active_page_slug"]
+        checked = st.checkbox("✅ Tandai modul ini selesai setelah data dan hasil diperiksa",
+                              value=bool(st.session_state["module_done"].get(slug, False)), key=f"done_{slug}")
+        st.session_state["module_done"][slug] = checked
+        if st.button("Buka Laporan & Ekspor →", key=f"module_report_{slug}", type="primary"):
+            go_to_page("laporan")
     st.divider()
     render_module_navigation("bawah")
 
