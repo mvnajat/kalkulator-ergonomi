@@ -10,6 +10,29 @@ from datetime import datetime, timezone
 from utils.exporter import SESSION_BACKUP_FIELDS, export_session_to_json, restore_session_from_json
 
 
+def google_auth_is_ready(secrets: object) -> bool:
+    """Return whether the five required Google OIDC secrets are present."""
+    try:
+        settings = secrets.get("auth", {})
+        return all(bool(settings.get(key)) for key in (
+            "redirect_uri", "cookie_secret", "client_id", "client_secret", "server_metadata_url"
+        ))
+    except Exception:
+        # Never show secret values (or secret-loading failures) in the UI.
+        return False
+
+
+def oidc_subject(user: object) -> str:
+    """Use the stable Google OIDC subject, not the email, as the data owner."""
+    try:
+        if not user.is_logged_in:
+            return ""
+        subject = user.get("sub")
+        return str(subject).strip() if subject else ""
+    except (AttributeError, KeyError, TypeError):
+        return ""
+
+
 PROJECT_FORMAT = "ie-toolkit-project-v1"
 MAX_PROJECT_SIZE = 5 * 1024 * 1024
 
