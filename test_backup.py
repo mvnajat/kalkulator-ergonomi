@@ -21,9 +21,13 @@ class BackupTests(unittest.TestCase):
             "snook_persentil": "P50",
             "berat_beban": 20.0,
         }
+        original["modul_09_simulasi"] = {
+            "h_cm": 25.0, "v_cm": 75.0, "berat_beban": 12.0,
+        }
 
         backup = json.loads(export_session_to_json(original))
         self.assertEqual(backup["modul_09_mmh"], original["modul_09"])
+        self.assertEqual(backup["modul_09_simulasi"], original["modul_09_simulasi"])
 
         restored = {}
         restore_session_from_json(restored, backup)

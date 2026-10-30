@@ -100,16 +100,20 @@ def hitung_niosh_lifting(h: float, v: float, d: float, a: float, f: float, c_typ
         raise ValueError("Jenis kualitas genggaman tidak dikenal.")
     cm = cm_map[c_type]
 
-    rwl = round(lc * hm * vm * dm * am * fm * cm, 2)
-    li = round(berat_beban / rwl, 2) if rwl > 0 else None
+    # Jangan membagi dengan RWL yang lebih dulu dibulatkan: pada batas risiko,
+    # pembulatan dapat mengubah LI dan kategori yang ditampilkan.
+    rwl_raw = lc * hm * vm * dm * am * fm * cm
+    li_raw = berat_beban / rwl_raw if rwl_raw > 0 else None
+    rwl = round(rwl_raw, 2)
+    li = round(li_raw, 3) if li_raw is not None else None
 
     if li is None:
         kategori = "Di luar batas RNLE (RWL = 0)"
         rekomendasi = "Kondisi berada di luar rentang yang direkomendasikan persamaan. Redesign tugas angkat sebelum dinilai kembali."
-    elif li <= 1.0:
+    elif li_raw <= 1.0:
         kategori = "LI <= 1 (lebih rendah risiko relatif)"
         rekomendasi = "Evaluasi juga kondisi nyata, pekerja, dan tugas berulang; LI <= 1 bukan jaminan bebas cedera."
-    elif li <= 3.0:
+    elif li_raw <= 3.0:
         kategori = "LI > 1 (perlu perbaikan)"
         rekomendasi = "Perlu rekayasa stasiun kerja (dekatkan jarak H, sesuaikan tinggi V, atau kurangi beban)."
     else:
@@ -124,6 +128,43 @@ def hitung_niosh_lifting(h: float, v: float, d: float, a: float, f: float, c_typ
         "kategori": kategori,
         "rekomendasi": rekomendasi,
         "durasi": durasi,
+    }
+
+
+def bandingkan_skenario_niosh(kondisi_awal: dict, usulan: dict) -> dict:
+    """Bandingkan dua tugas angkat dengan model RNLE yang sama.
+
+    Persentase perubahan LI hanya bermakna bila kedua skenario berada di dalam
+    cakupan persamaan. Penurunan LI bukan jaminan kondisi kerja aman.
+    """
+    def nilai(data: dict) -> dict:
+        return hitung_niosh_lifting(
+            data["h_cm"], data["v_cm"], data["d_cm"], data["a_deg"],
+            data["f_lift"], data["coupling"], data["berat_beban"],
+            data["durasi_angkat"],
+        )
+
+    awal, akhir = nilai(kondisi_awal), nilai(usulan)
+    li_awal, li_akhir = awal["li"], akhir["li"]
+    if li_awal is None or li_akhir is None:
+        perubahan_pct = None
+        status = "Minimal satu skenario berada di luar cakupan RNLE; perubahan LI tidak dapat dibandingkan."
+    else:
+        perubahan_pct = round(100 * (li_awal - li_akhir) / li_awal, 1)
+        if li_akhir < li_awal:
+            status = "LI menurun; verifikasi kelayakan perubahan di kondisi kerja nyata."
+        elif li_akhir > li_awal:
+            status = "LI meningkat; usulan belum mengurangi indikator risiko angkat."
+        else:
+            status = "LI tidak berubah."
+
+    return {
+        "awal": awal,
+        "usulan": akhir,
+        "perubahan_li_pct": perubahan_pct,
+        "perubahan_rwl_kg": round(akhir["rwl"] - awal["rwl"], 2),
+        "status": status,
+        "li_usulan_le_1": li_akhir is not None and li_akhir <= 1,
     }
 
 
@@ -482,6 +523,14 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
         line(f"Estimasi biomekanika L5/S1: {summary.get('f_kompresi_n')} N; "
              f"{summary.get('status_l5s1', '-')}.")
         line("Perhitungan Snook pada aplikasi hanya simulasi edukatif dan bukan batas resmi Liberty Mutual.")
+    comparison = calc_results.get("m9_simulasi_summary")
+    if comparison:
+        before, after = comparison["awal"], comparison["usulan"]
+        line(f"Simulasi NIOSH (sebelum -> usulan): RWL {before['rwl']} -> {after['rwl']} kg; "
+             f"LI {before['li'] if before['li'] is not None else 'tidak valid'} -> "
+             f"{after['li'] if after['li'] is not None else 'tidak valid'}.")
+        line(comparison["status"])
+        line("Penurunan LI bukan persentase penurunan risiko cedera; verifikasi kondisi kerja nyata.")
 
     section("I. ANALISIS DAN PEMBAHASAN PRAKTIKAN")
     for nomor in range(1, 10):
@@ -496,7 +545,7 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
     pdf.ln(7)
     pdf.set_font("Helvetica", "B", 9)
     pdf.cell(90, 6, "Dosen / Asisten Laboratorium", align="C")
-    pdf.cell(90, 6, "Ketua Kelompok", ln=True, align="C")
+    pdf.cell(90, 6, "Ketua Kelompok", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(13)
     pdf.set_font("Helvetica", "", 9)
     pdf.set_x(pdf.l_margin)

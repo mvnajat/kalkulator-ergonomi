@@ -18,6 +18,7 @@ SESSION_BACKUP_FIELDS = (
     ("modul_07_kebisingan", "modul_07"),
     ("modul_08_pencahayaan", "modul_08"),
     ("modul_09_mmh", "modul_09"),
+    ("modul_09_simulasi", "modul_09_simulasi"),
     ("analisis_modul", "analisis_modul"),
 )
 
@@ -195,6 +196,22 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
     ]
     write_table(ws_m9, 4, ["Parameter", "Nilai / Hasil"], m9_rows)
 
+    sim_data = state_dict.get("modul_09_simulasi")
+    sim_summary = calc_results.get("m9_simulasi_summary")
+    if isinstance(sim_data, dict) and isinstance(sim_summary, dict):
+        ws_sim = wb.create_sheet("09_Simulasi")
+        style_worksheet(ws_sim, "MODUL 09 - PERBANDINGAN KONDISI ANGKAT DAN USULAN PERBAIKAN")
+        sim_fields = labels_m9[:8]
+        sim_rows = [[label, m9.get(key), sim_data.get(key)] for key, label in sim_fields]
+        sim_rows.extend([
+            ["Recommended Weight Limit (kg)", sim_summary["awal"]["rwl"], sim_summary["usulan"]["rwl"]],
+            ["Lifting Index", sim_summary["awal"]["li"], sim_summary["usulan"]["li"]],
+            ["Kategori", sim_summary["awal"]["kategori"], sim_summary["usulan"]["kategori"]],
+            ["Perubahan LI (%)", None, sim_summary["perubahan_li_pct"]],
+            ["Interpretasi", "Perbandingan edukatif, bukan kepastian bebas cedera", sim_summary["status"]],
+        ])
+        write_table(ws_sim, 4, ["Parameter", "Kondisi Awal", "Usulan"], sim_rows)
+
     # Sheet pengamatan mentah membuat angka ringkasan dapat diperiksa ulang.
     def write_observations(sheet_name, title, records, key_label, second_label, sample_prefix):
         ws = wb.create_sheet(sheet_name)
@@ -253,6 +270,8 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
     order = ["00_Identitas", "01_Fisiologi", "02_Postur_Kerja", "03_Waktu_Kerja", "03_Data_Mentah",
              "04_Antropometri_32D", "04_Data_Mentah", "05_Antropometri_Lanjutan", "05_Data_Mentah",
              "06_08_Lingkungan_Kerja", "06_08_Data_Mentah", "09_MMH"]
+    if "09_Simulasi" in wb:
+        order.append("09_Simulasi")
     wb._sheets = [wb[name] for name in order]
 
     output = io.BytesIO()
