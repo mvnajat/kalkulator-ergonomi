@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import hashlib
 from html import escape
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -19,6 +20,13 @@ from utils.calculations import (
     hitung_lingkungan_perbandingan,
 )
 from utils.exporter import export_session_to_json, export_session_to_excel, restore_session_from_json
+from utils.workspace import (
+    create_project_file, read_project_file, normalize_project_name,
+    cloud_save, cloud_list, cloud_load,
+)
+from utils.importer import make_excel_template, read_excel_observations
+from utils.education import LESSONS, worked_example
+from utils.module_report import export_module_pdf
 from utils.table_editor import prepare_editor_scope, edit_table_rows
 from utils.advanced_features import (
     hitung_niosh_lifting,
@@ -256,6 +264,10 @@ st.markdown("""
         .panel-card, .module-card { padding: 15px 14px; }
         .mod-desc { min-height: 0; }
         div.stButton > button { min-height: 44px; height: auto; }
+        div[data-testid="stHorizontalBlock"] { gap: 0.55rem; }
+        div[data-testid="stMetric"] { padding: 0.45rem; }
+        div[data-testid="stDataFrame"] { max-width: 100%; overflow-x: auto; }
+        div[data-testid="stFileUploader"] { min-width: 0; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -286,6 +298,9 @@ def init_session_state():
     wib_now = datetime.now(ZoneInfo("Asia/Jakarta"))
     st.session_state["nav_page"] = "Beranda"
     st.session_state["selected_modul"] = "Modul 01 - Fisiologi Kerja"
+    st.session_state["project_name"] = "Praktikum Ergonomi - Proyek 1"
+    st.session_state["module_done"] = {}
+    st.session_state["_local_projects"] = {}
 
     st.session_state["identitas"] = {
         "universitas": "Universitas Pelita Bangsa",
@@ -627,6 +642,10 @@ STATIC_PAGES = {
     "identitas": "Identitas",
     "analisis-postur": "Analisis Postur (RULA/OWAS/REBA)",
     "laporan": "Laporan & Cadangan",
+    "dashboard": "Dashboard Kemajuan",
+    "proyek": "Proyek Praktikum",
+    "impor-excel": "Impor Excel",
+    "ruang-belajar": "Ruang Belajar",
 }
 
 
@@ -674,6 +693,199 @@ def render_module_navigation(place: str) -> None:
             go_to_page(MODULE_ORDER[idx + 1])
 
 
+def reset_restored_widgets() -> None:
+    """Loaded project/input must replace widget baselines from the old project."""
+    for key in list(st.session_state):
+        if key.startswith(("_ui_", "ling_", "done_", "ed_m", "op1_dn", "op2_dn", "sim_rula_")):
+            st.session_state.pop(key, None)
+    st.session_state.pop("_table_editor_scope", None)
+    st.session_state["_cloud_last_signature"] = ""
+
+
+def configured_project_db() -> str:
+    try:
+        return str(st.secrets.get("PROJECT_DATABASE_URL", "") or "")
+    except Exception:
+        return ""
+
+
+def signed_in_user_id() -> str:
+    try:
+        user = st.user
+        subject = user.get("sub") if user.is_logged_in else None
+        return str(subject).strip() if subject else ""
+    except (AttributeError, KeyError, TypeError):
+        return ""
+
+
+def render_dashboard() -> None:
+    st.subheader("📊 Dashboard Kemajuan Praktikum")
+    st.caption("Status selesai ditandai secara manual setelah hasil diperiksa; data contoh bukan bukti modul sudah selesai.")
+    done = st.session_state["module_done"]
+    count = sum(bool(done.get(slug)) for slug in MODULE_ORDER)
+    a, b, c = st.columns(3)
+    a.metric("Modul diperiksa", f"{count}/9")
+    b.metric("Belum selesai", str(9-count))
+    c.metric("Kemajuan", f"{count/9:.0%}")
+    st.progress(count/9)
+    st.caption(f"Proyek aktif: {st.session_state['project_name']}")
+    cols = st.columns(3)
+    for idx, slug in enumerate(MODULE_ORDER):
+        with cols[idx % 3]:
+            with st.container(border=True):
+                st.markdown(f"**{MODULE_PAGE_TITLES[slug]}**")
+                st.write("✅ Sudah diperiksa" if done.get(slug) else "⏳ Belum ditandai")
+                if st.button("Buka modul →", key=f"dash_{slug}", use_container_width=True):
+                    go_to_page(slug)
+    st.divider()
+    st.markdown("#### Ringkasan angka latihan saat ini")
+    res = compile_all_calculations()
+    m3 = res.get("m3_rows", [])
+    s = res.get("m9_summary", {})
+    x, y, z = st.columns(3)
+    x.metric("Pengamatan postur", len(st.session_state["modul_02"].get("records", [])))
+    y.metric("Total waktu baku", f"{sum(r[12] for r in m3):.2f} detik")
+    z.metric("NIOSH Lifting Index", str(s.get("li", "-")))
+    st.info("Ringkasan tersebut berasal dari data yang saat ini ada di sesi, termasuk data contoh. "
+            "Periksa hasil masing-masing modul sebelum membuat kesimpulan akademik.")
+
+
+def render_project_manager() -> None:
+    st.subheader("💾 Manajer Proyek Praktikum")
+    st.caption("Beri nama proyek, simpan snapshot dalam sesi, lalu unduh file proyek. "
+               "File .json dapat dibuka kembali di perangkat lain.")
+    current_name = st.text_input("Nama proyek aktif", key="_project_name_edit")
+    try:
+        name = normalize_project_name(current_name)
+        st.session_state["project_name"] = name
+        serialized = create_project_file(name, st.session_state)
+    except (ValueError, TypeError) as exc:
+        st.warning(str(exc))
+        serialized = None
+    if serialized:
+        st.download_button("⬇️ Simpan file proyek (.json) — bisa dibuka lagi kapan saja",
+                           data=serialized.encode("utf-8"),
+                           file_name="Proyek_Ergonomi.json", mime="application/json", use_container_width=True)
+        if st.button("📌 Simpan snapshot di sesi ini", use_container_width=True):
+            st.session_state["_local_projects"][name] = json.loads(export_session_to_json(st.session_state))
+            st.success(f"Snapshot '{name}' tersimpan selama sesi ini.")
+    options = list(st.session_state["_local_projects"])
+    if options:
+        selected = st.selectbox("Buka snapshot dalam sesi", options)
+        if st.button("📂 Buka snapshot terpilih"):
+            restore_session_from_json(st.session_state, st.session_state["_local_projects"][selected])
+            st.session_state["project_name"] = selected
+            st.session_state["_project_pending_name"] = selected
+            reset_restored_widgets()
+            st.rerun()
+    uploaded = st.file_uploader("Impor file proyek (.json)", type=["json"], key="_project_upload")
+    if uploaded is not None and st.button("📥 Buka proyek dari file"):
+        try:
+            imported_name, backup = read_project_file(uploaded.getvalue())
+            restore_session_from_json(st.session_state, backup)
+            st.session_state["project_name"] = imported_name
+            st.session_state["_project_pending_name"] = imported_name
+            reset_restored_widgets()
+            st.session_state["_project_opened"] = True
+            st.rerun()
+        except ValueError as exc:
+            st.error(f"Proyek tidak dibuka: {exc}")
+    if st.session_state.pop("_project_opened", False):
+        st.success("Proyek berhasil dibuka beserta data dan status modulnya.")
+
+    st.divider()
+    st.markdown("#### ☁️ Penyimpanan cloud pribadi (opsional)")
+    db_url = configured_project_db()
+    if not db_url:
+        st.info("Cloud belum diaktifkan oleh pengelola. Gunakan file proyek JSON untuk "
+                "penyimpanan permanen. Database server lokal tidak digunakan untuk proyek pribadi.")
+        return
+    owner = signed_in_user_id()
+    if not owner:
+        st.warning("Masuk dengan akun pribadi sebelum menyimpan ke cloud.")
+        if hasattr(st, "login") and st.button("Masuk dengan akun terkonfigurasi"):
+            st.login()
+        return
+    st.success("Akun terverifikasi. Proyek hanya ditampilkan untuk akun ini.")
+    st.checkbox("Aktifkan simpan otomatis ke cloud saat data berubah", key="_cloud_autosave")
+    if st.button("☁️ Simpan proyek ke cloud sekarang") and serialized:
+        try:
+            cloud_save(db_url, owner, name, json.loads(export_session_to_json(st.session_state)))
+            st.success("Proyek berhasil tersimpan ke database cloud pribadi.")
+        except Exception:
+            st.error("Simpan cloud gagal. Periksa konfigurasi database bersama pengelola.")
+    try:
+        names = cloud_list(db_url, owner)
+    except Exception:
+        st.warning("Daftar proyek cloud tidak dapat dimuat. Coba lagi nanti.")
+        names = []
+    if names:
+        selected = st.selectbox("Pilih proyek cloud", names)
+        if st.button("📂 Buka proyek cloud"):
+            try:
+                backup = cloud_load(db_url, owner, selected)
+                restore_session_from_json(st.session_state, backup)
+                st.session_state["project_name"] = selected
+                st.session_state["_project_pending_name"] = selected
+                reset_restored_widgets()
+                st.rerun()
+            except Exception:
+                st.error("Proyek cloud tidak dapat dibuka.")
+
+
+def render_excel_import() -> None:
+    st.subheader("📥 Impor Data Pengamatan dari Excel")
+    st.caption("Unduh template, ubah angka contoh menjadi pengukuran sebenarnya, lalu unggah. "
+               "Impor didukung untuk Modul 03–08; file diperiksa sebelum mengganti data aktif.")
+    number = st.selectbox("Target modul", list(f"{i:02d}" for i in range(3, 9)),
+                          format_func=lambda n: MODULE_PAGE_TITLES[f"modul-{n}"])
+    current = st.session_state[f"modul_{number}"]
+    st.download_button(f"⬇️ Unduh template Modul {number} (.xlsx)",
+                       data=make_excel_template(number, st.session_state),
+                       file_name=f"Template_Modul_{number}.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    uploaded = st.file_uploader("Pilih file .xlsx sesuai template", type=["xlsx"], key=f"_import_excel_upload_{number}")
+    if uploaded is not None:
+        try:
+            new_data = read_excel_observations(number, uploaded.getvalue(), current)
+        except ValueError as exc:
+            st.error(f"Validasi gagal: {exc}")
+        else:
+            st.success(f"Validasi berhasil untuk Modul {number}. Data lama belum diganti.")
+            st.dataframe(pd.DataFrame(new_data.get({"03":"df_siklus","04":"df_32","05":"df_3dim"}.get(number), [])
+                                        or [{k: new_data[k] for k in new_data if isinstance(new_data[k], list)}]),
+                         use_container_width=True)
+            if st.button(f"✅ Terapkan data ke Modul {number}"):
+                st.session_state[f"modul_{number}"] = new_data
+                st.session_state["module_done"][f"modul-{number}"] = False
+                reset_restored_widgets()
+                st.session_state["_import_completed"] = number
+                st.rerun()
+    if st.session_state.pop("_import_completed", None):
+        st.success("Data Excel berhasil diterapkan. Buka modul untuk meninjau hasil perhitungan.")
+
+
+def render_learning_center() -> None:
+    st.subheader("📖 Ruang Belajar Ergonomi")
+    st.caption("Ringkasan konsep, contoh substitusi berdasarkan data aktif, serta soal latihan.")
+    number = st.selectbox("Pilih materi", list(LESSONS),
+                          format_func=lambda n: f"Modul {n} — {LESSONS[n][0]}")
+    title, theory, exercise, caution = LESSONS[number]
+    st.markdown(f"### {title}")
+    st.write(theory)
+    st.markdown("#### Contoh penelusuran hasil")
+    try:
+        for step in worked_example(number, st.session_state):
+            st.code(step, language=None)
+    except (ValueError, TypeError, ZeroDivisionError) as exc:
+        st.warning(f"Contoh belum dapat dihitung: {exc}")
+    st.markdown("#### Latihan mandiri")
+    st.info(exercise)
+    st.warning(caution)
+    if st.button("Buka lembar kerja modul ini →"):
+        go_to_page(f"modul-{number}")
+
+
 # -----------------------------------------------------------------------------
 # 4. LOGO & NAMA UNIVERSITAS DI POJOK KIRI ATAS LAYAR + BAR MENU NAVIGASI
 # -----------------------------------------------------------------------------
@@ -705,6 +917,16 @@ for idx, (label, slug) in enumerate(nav_options):
         if st.button(btn_label, key=f"nav_btn_{idx}", use_container_width=True):
             go_to_page(slug)
 
+with st.sidebar:
+    st.markdown("### 🚀 Alat Praktikum")
+    st.caption(f"Proyek: {st.session_state['project_name']}")
+    for sidebar_slug, sidebar_label in (
+        ("dashboard", "📊 Dashboard"), ("proyek", "💾 Proyek Saya"),
+        ("impor-excel", "📥 Impor Excel"), ("ruang-belajar", "📖 Ruang Belajar"),
+    ):
+        if st.button(sidebar_label, key=f"side_{sidebar_slug}", use_container_width=True):
+            go_to_page(sidebar_slug)
+
 # A table's source must remain unchanged during cell edits. When the user
 # leaves the worksheet, its next visit will use the last saved values.
 if st.session_state["nav_page"] != "Modul Praktikum":
@@ -726,6 +948,15 @@ total_bukti_gambar = st.session_state["modul_02"]["bukti_gambar_count"]
 # HALAMAN 1: BERANDA (DASHBOARD MODUL & RINGKASAN)
 # -----------------------------------------------------------------------------
 if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
+    if st.session_state["nav_page"] == "Beranda":
+        tools_cols = st.columns(4)
+        for col, (label, slug) in zip(tools_cols, (
+            ("📊 Dashboard", "dashboard"), ("💾 Proyek", "proyek"),
+            ("📥 Impor Excel", "impor-excel"), ("📖 Belajar", "ruang-belajar"),
+        )):
+            with col:
+                if st.button(label, key=f"home_tool_{slug}", use_container_width=True):
+                    go_to_page(slug)
     if st.session_state["nav_page"] == "Daftar Modul":
         st.subheader("📚 Daftar 9 Modul Praktikum")
         st.caption("Klik kartu untuk masuk ke halaman khusus modul. Tombol Back browser dan navigasi antarmodul dapat digunakan.")
@@ -806,6 +1037,24 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
                 """, unsafe_allow_html=True)
                 if st.button(f"Buka lembar kerja {m_code}", key=f"open_{m_code}", use_container_width=True):
                     go_to_page(page_slug)
+
+# -----------------------------------------------------------------------------
+# ALAT BARU: DASHBOARD, PROYEK, IMPOR EXCEL, DAN RUANG BELAJAR
+# -----------------------------------------------------------------------------
+elif st.session_state["nav_page"] == "Dashboard Kemajuan":
+    render_dashboard()
+
+elif st.session_state["nav_page"] == "Proyek Praktikum":
+    if "_project_pending_name" in st.session_state:
+        st.session_state["_project_name_edit"] = st.session_state.pop("_project_pending_name")
+    st.session_state.setdefault("_project_name_edit", st.session_state["project_name"])
+    render_project_manager()
+
+elif st.session_state["nav_page"] == "Impor Excel":
+    render_excel_import()
+
+elif st.session_state["nav_page"] == "Ruang Belajar":
+    render_learning_center()
 
 # -----------------------------------------------------------------------------
 # HALAMAN 2: IDENTITAS KELOMPOK & OPERATOR
@@ -975,8 +1224,29 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
 
         st.divider()
         if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
-            st.session_state["nav_page"] = "Analisis Postur (RULA/OWAS/REBA)"
-            st.rerun()
+            go_to_page("analisis-postur")
+
+        with st.expander("🔄 Simulasi perbaikan postur RULA (tanpa mengubah observasi)"):
+            st.caption("Gunakan skor contoh usulan untuk memahami perubahan grand score; "
+                       "nilai resmi harus diperoleh dari observasi setelah perbaikan.")
+            rec = st.session_state["modul_02"]["records"][0]
+            original = rec["rula_params"]
+            rula_before = hitung_rula(original["ua"], original["la"], original["wr"], original["wt"],
+                                     original["nk"], original["tr"], original["lg"], original["ma"],
+                                     original["fa"], original["mb"], original["fb"])
+            r1, r2, r3 = st.columns(3)
+            proposed_ua = r1.slider("Usulan skor lengan atas", 1, 6, int(original["ua"]), key="sim_rula_ua")
+            proposed_nk = r2.slider("Usulan skor leher", 1, 6, int(original["nk"]), key="sim_rula_nk")
+            proposed_tr = r3.slider("Usulan skor punggung", 1, 6, int(original["tr"]), key="sim_rula_tr")
+            rula_after = hitung_rula(proposed_ua, original["la"], original["wr"], original["wt"],
+                                    proposed_nk, proposed_tr, original["lg"], original["ma"],
+                                    original["fa"], original["mb"], original["fb"])
+            before, after = rula_before["grand_score"], rula_after["grand_score"]
+            r1.metric("RULA sebelum", before)
+            r2.metric("RULA usulan", after)
+            r3.metric("Perubahan skor", f"{after-before:+d}")
+            st.caption("Simulasi hanya mengganti tiga komponen postur; parameter lain tetap. "
+                       "Penurunan skor tidak sama dengan persentase penurunan risiko cedera.")
 
         st.session_state["analisis_modul"]["Modul 02"] = st.text_area(
             "Analisis & Pembahasan Modul 02:", value=st.session_state["analisis_modul"]["Modul 02"]
@@ -1365,6 +1635,22 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Analisis & Pembahasan Modul 09:", value=st.session_state["analisis_modul"]["Modul 09"]
         )
 
+    with st.expander("🧮 Penelusuran rumus, contoh hitung & bahan belajar", expanded=False):
+        module_number = st.session_state["_active_page_slug"].split("-")[-1]
+        lesson = LESSONS[module_number]
+        st.write(lesson[1])
+        try:
+            for step in worked_example(module_number, st.session_state):
+                st.code(step, language=None)
+        except (ValueError, TypeError, ZeroDivisionError) as exc:
+            st.warning(f"Penelusuran belum dapat dihitung: {exc}")
+        st.info("Latihan: " + lesson[2])
+        st.caption(lesson[3])
+
+    slug = st.session_state["_active_page_slug"]
+    checked = st.checkbox("✅ Tandai modul ini selesai setelah data dan hasil diperiksa",
+                          value=bool(st.session_state["module_done"].get(slug, False)), key=f"done_{slug}")
+    st.session_state["module_done"][slug] = checked
     st.divider()
     render_module_navigation("bawah")
 
@@ -1529,6 +1815,20 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
         )
 
     st.divider()
+    st.markdown("#### 📄 Buat Laporan PDF untuk Satu Modul")
+    pdf_mod = st.selectbox("Pilih modul untuk laporan terpisah", list(LESSONS),
+                           format_func=lambda n: f"Modul {n} - {LESSONS[n][0]}")
+    st.caption("Berisi identitas, ringkasan hasil, substitusi rumus/metode, pembahasan, "
+               "dan kolom pengesahan. Hasil mengikuti data aktif saat ini.")
+    try:
+        module_pdf = export_module_pdf(pdf_mod, st.session_state, calc_results)
+    except (RuntimeError, ValueError, OSError) as exc:
+        st.warning(f"PDF modul belum tersedia: {exc}")
+    else:
+        st.download_button("⬇️ Unduh Laporan Modul Terpilih (.pdf)", data=module_pdf,
+                           file_name=f"Laporan_Ergonomi_Modul_{pdf_mod}.pdf", mime="application/pdf")
+
+    st.divider()
     st.markdown("#### 🔄 Pulihkan Data dari File Cadangan JSON")
     if st.session_state.pop("_json_restore_success", False):
         st.success("✅ Data sesi berhasil dipulihkan dari file JSON!")
@@ -1547,4 +1847,21 @@ elif st.session_state["nav_page"] == "Laporan & Cadangan":
             st.rerun()
         except Exception as e:
             st.error(f"Gagal membaca file JSON: {e}")
+
+
+# Cloud autosave is strictly opt-in and only runs for a signed-in OIDC account.
+# Without private DB configuration the app never uploads project content.
+if st.session_state.get("_cloud_autosave"):
+    project_db = configured_project_db()
+    owner_sub = signed_in_user_id() if project_db else ""
+    if project_db and owner_sub:
+        payload = export_session_to_json(st.session_state)
+        signature = hashlib.sha256((owner_sub + st.session_state["project_name"] + payload).encode("utf-8")).hexdigest()
+        if signature != st.session_state.get("_cloud_last_signature"):
+            try:
+                cloud_save(project_db, owner_sub, st.session_state["project_name"], json.loads(payload))
+            except Exception:
+                st.warning("Simpan otomatis cloud tertunda. Unduh file proyek sebagai cadangan.")
+            else:
+                st.session_state["_cloud_last_signature"] = signature
             

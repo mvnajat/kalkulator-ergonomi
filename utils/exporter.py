@@ -20,6 +20,7 @@ SESSION_BACKUP_FIELDS = (
     ("modul_09_mmh", "modul_09"),
     ("modul_09_simulasi", "modul_09_simulasi"),
     ("analisis_modul", "analisis_modul"),
+    ("module_done", "module_done"),
 )
 
 
