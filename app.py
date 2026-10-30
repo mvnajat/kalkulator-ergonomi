@@ -1173,7 +1173,7 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
                     <span class="badge-done">{'Sudah diperiksa' if st.session_state['module_done'].get(page_slug) else 'Belum diperiksa'}</span>
                     <div class="mod-title">{m_title}</div>
                     <div class="mod-desc">{m_desc}</div>
-                    <div class="mod-footer">Teknik Industri · Data terintegrasi ke Laporan PDF & Excel</div>
+                    <div class="mod-footer">Data terintegrasi ke Laporan PDF & Excel</div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button(f"Buka lembar kerja {m_code}", key=f"open_{m_code}", use_container_width=True):
