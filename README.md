@@ -12,6 +12,8 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+- **Navigasi multipage:** 9 modul kini memiliki halaman dan URL sendiri (`/modul-01` sampai `/modul-09`). Tombol **Daftar Modul**, **Sebelumnya**, dan **Berikutnya** serta tombol Back/Forward browser memudahkan berpindah halaman.
+- **Modul lingkungan dipisahkan:** Modul 06 (Temperatur), 07 (Kebisingan), dan 08 (Pencahayaan) kini memiliki input, hasil, peringatan, dan analisis masing-masing. Semua nilai tetap ikut di ekspor PDF/Excel/JSON.
 - **Simulasi perbaikan Manual Material Handling (Modul 09):** bandingkan kondisi awal dengan usulan jarak horizontal, tinggi tangan, perpindahan vertikal, sudut, frekuensi, durasi, genggaman, dan berat beban. RWL serta Lifting Index dihitung untuk kedua skenario tanpa mengganti data observasi utama.
 - **Ekspor skenario:** unduh perbandingan `.csv`; skenario juga disertakan dalam cadangan `.json`, ringkasan PDF, dan sheet `09_Simulasi` pada Excel.
 - **Perhitungan dan validasi:** Lifting Index memakai RWL tanpa pembulatan antara; input faktor penyesuaian, allowance, dan parameter statistik diuji terhadap nilai yang tidak valid.
@@ -19,6 +21,8 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 - **Uji regresi:** skenario RNLE, kondisi di luar cakupan, ekspor, dan backup mendapat tes tambahan.
 
 **Batas pemakaian:** NIOSH RNLE digunakan untuk pengangkatan dua tangan sesuai cakupan model. Perubahan persentase LI bukan perubahan persentase risiko cedera. Modul Snook adalah simulasi edukatif, sedangkan L5/S1 memakai pendekatan biomekanika sederhana. Kedua hasil tersebut tidak boleh dianggap pengganti penilaian K3 lapangan.
+
+**Catatan penyimpanan:** Navigasi antarmodul melalui tombol aplikasi mempertahankan data selama sesi aktif. Membuka URL modul secara langsung di tab baru atau memuat ulang halaman dapat membuat sesi baru; unduh **Cadangan JSON** untuk menyimpan pekerjaan secara permanen.
 
 ## Cara Menjalankan Secara Lokal
 ```bash
