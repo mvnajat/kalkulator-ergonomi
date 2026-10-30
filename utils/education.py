@@ -4,19 +4,20 @@ import statistics
 
 from utils.calculations import (
     hitung_fisiologi_cvl, hitung_waktu_kerja, hitung_antropometri_statistik,
-    hitung_rula, hitung_owas, hitung_reba,
+    hitung_rula, hitung_owas, hitung_reba, hitung_pemulihan_nadi,
+    hitung_perbandingan_waktu_kerja,
 )
 from utils.advanced_features import hitung_niosh_lifting
 
 
 LESSONS = {
-    "01": ("Fisiologi Kerja", "Denyut nadi kerja, denyut nadi maksimum, %CVL, dan estimasi energi.",
+    "01": ("Fisiologi Kerja", "Denyut nadi kerja, %CVL, estimasi energi, pemulihan P0–P5, ECPT/ECPM.",
            "Bagaimana perubahan denyut kerja memengaruhi %CVL jika nadi istirahat tetap?",
            "%CVL adalah indikator latihan, bukan diagnosis medis. Periksa cara pengukuran denyut nadi."),
     "02": ("Penilaian Postur", "RULA, OWAS, dan REBA adalah metode penilaian postur dengan tabel skor.",
            "Nilai satu aktivitas sebelum dan sesudah memperbaiki posisi meja.",
            "Skor harus diverifikasi dari observasi sudut, gaya, durasi, dan aktivitas; AI hanya alat bantu."),
-    "03": ("Pengukuran Waktu Kerja", "Waktu siklus, faktor Westinghouse, allowance, uji keseragaman dan kecukupan.",
+    "03": ("Pengukuran Waktu Kerja", "Waktu siklus, Schummard, Westinghouse, Objektif, penyesuaian akhir, allowance, dan uji data.",
            "Hitung Wn dan Wb untuk satu elemen setelah mengubah allowance dari 10% ke 15%.",
            "Pilih rumus allowance sesuai panduan dosen; aplikasi memakai Wb = Wn/(1 - a)."),
     "04": ("Antropometri 32 Dimensi", "Rata-rata, simpangan baku sampel, persentil normal dan uji Shapiro-Wilk.",
@@ -48,11 +49,21 @@ def worked_example(module: str, state: dict) -> list[str]:
         rest, work = float(m["op1_akt1_dni"]), float(m["op1_akt1_dnk"])
         age = int(ident["op1_usia"])
         maximum = 220 - age if ident["op1_jk"] == "Laki-laki" else 200 - age
-        r = hitung_fisiologi_cvl(rest, work, age, ident["op1_jk"])
-        denominator = max(maximum - rest, 1)
-        return [f"DN maks = {maximum} bpm (usia {age} tahun)",
+        try:
+            r = hitung_fisiologi_cvl(rest, work, age, ident["op1_jk"])
+        except ValueError as exc:
+            return [f"Periksa nadi dan usia operator: {exc}"]
+        denominator = maximum - rest
+        steps = [f"DN maks = {maximum} bpm (usia {age} tahun)",
                 f"%CVL = ({work:g} - {rest:g}) / {denominator:g} × 100 = {r['cvl_persen']:.2f}%",
                 f"Estimasi energi bersih = {r['ke_bersih_kkal_menit']} kkal/menit"]
+        pulse = m.get("pemulihan", {}).get("op1")
+        if pulse:
+            rec = hitung_pemulihan_nadi(pulse)
+            steps += [f"ECPT = (P3+P4+P5)/3 - P0 = {rec['ecpt']:.3f} bpm",
+                      f"ECPM = (P1+P2-P3) - (P3+P4+P5)/3 = {rec['ecpm']:.3f} bpm",
+                      "ECPT/ECPM adalah indeks nadi sesuai panduan, bukan energi kkal."]
+        return steps
     if module == "02":
         records = m.get("records", [])
         if not records:
@@ -73,12 +84,25 @@ def worked_example(module: str, state: dict) -> list[str]:
         west = sum(m["westinghouse"].values())
         allowance = sum(m[field] for field in ("allowance_pribadi", "allowance_kelelahan", "allowance_hambatan"))
         r = hitung_waktu_kerja(x, west, allowance, m["k_level"], m["s_level"])
-        return [f"Ws = Σ waktu / n = {sum(x):.3f} / {len(x)} = {r['ws']:.3f} detik",
+        filled = [v for v in x if v > 0]
+        steps = [f"Ws = Σ waktu / n = {sum(filled):.3f} / {len(filled)} = {r['ws']:.3f} detik",
                 f"p = 1 + Σ rating Westinghouse = 1 + ({west:+.3f}) = {r['p_factor']:.3f}",
                 f"Wn = Ws × p ≈ {r['ws']:.3f} × {r['p_factor']:.3f} = {r['wn']:.3f} detik",
                 f"Wb = Wn / (1 - {allowance:g}/100) = {r['wb']:.3f} detik",
                 f"BKA/BKB = Ws ± k × SD = {r['bka']:.3f} / {r['bkb']:.3f}; N' = {r['n_prime']:.2f}",
                 f"Output standar = 3600/Wb = {r['output_standar_per_jam']:.2f} unit/jam"]
+        profile = next((p for p in m.get("rating_rows", []) if p.get("Kode") == rows[0].get("Kode")), {})
+        comparison = hitung_perbandingan_waktu_kerja(
+            x, westinghouse=m["westinghouse"], skor_schummard=profile.get("Skor Schummard", 60),
+            skor_kesulitan=profile, p_akhir=profile.get("p akhir", 1),
+            allowance_pct=allowance, k_level=m["k_level"], s_level=m["s_level"],
+        )
+        steps += [
+            f"Schummard: p1 = skor/60 = {comparison['p1']:.3f}",
+            f"Objektif: p2 = 1 + total/100 = {comparison['p2']:.3f}; p = p1×p2 = {comparison['factors']['Objektif']:.3f}",
+            f"Penyesuaian akhir manual p = {comparison['factors']['Akhir (manual)']:.3f} (perlu alasan penilaian)",
+        ]
+        return steps
     if module in ("04", "05"):
         key, prefix = ("df_32", "P") if module == "04" else ("df_3dim", "S")
         rows = m.get(key, [])

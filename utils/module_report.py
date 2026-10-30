@@ -62,6 +62,16 @@ def export_module_pdf(module: str, state: dict, results: dict) -> bytes:
             line(f"{i}. " + " | ".join(_safe_text(value) for value in row))
     else:
         line("Belum ada hasil yang valid.")
+    if module == "01" and results.get("m1_recovery_rows"):
+        section("C.1. PEMULIHAN NADI DAN ECPT/ECPM")
+        line("ECPT/ECPM dihitung dari P0-P5 (satuan indeks bpm, bukan kkal).")
+        for row in results["m1_recovery_rows"]:
+            line(f"- {row[0]}: P0-P5={row[1:7]}; ECPT={row[7]} bpm; ECPM={row[8]} bpm; pemulihan={row[9]}%")
+    if module == "03" and results.get("m3_comparison_rows"):
+        section("C.1. PERBANDINGAN EMPAT METODE PENYESUAIAN")
+        line("Akhir (manual) adalah faktor pilihan praktikan, bukan rerata otomatis.")
+        for row in results["m3_comparison_rows"]:
+            line(f"- {row[0]} / {row[2]}: p={row[4]:g}, Ws={row[3]:g}, Wn={row[9]:g}, Wb={row[10]:g} detik")
     section("D. PEMBAHASAN DAN KESIMPULAN PRAKTIKAN")
     line(state.get("analisis_modul", {}).get(f"Modul {module}", "Belum diisi."))
     section("E. LATIHAN / TINDAK LANJUT")

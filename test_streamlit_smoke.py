@@ -87,6 +87,29 @@ class StreamlitSmokeTests(unittest.TestCase):
                 if nomor == "06":
                     self.assertEqual(app.session_state["modul_06"]["dingin_suhu"][0], 24.5)
 
+    def test_phase1_pulse_inputs_and_method_selector_render(self):
+        from streamlit.testing.v1 import AppTest
+
+        app_path = str(Path(__file__).with_name("app.py"))
+        app = AppTest.from_file(app_path, default_timeout=45).run()
+        app.button(key="open_Modul 01").click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(len([w for w in app.number_input
+                              if w.key and w.key.startswith("pulse_")]), 12)
+        self.assertEqual(app.number_input(key="pulse_op1_P5").value, 75.0)
+
+        fresh = AppTest.from_file(app_path, default_timeout=45).run()
+        fresh.button(key="open_Modul 03").click().run()
+        self.assertFalse(fresh.exception)
+        methods = [item for item in fresh.selectbox if "Metode yang digunakan" in item.label]
+        self.assertEqual(len(methods), 1)
+        self.assertEqual(methods[0].value, "Westinghouse")
+        self.assertIn("Objektif", methods[0].options)
+        self.assertIn("Akhir (manual)", methods[0].options)
+        # Streamlit AppTest 1.40 kembali ke beranda setelah navigasi
+        # st.switch_page di rerun ke-2; interaksi pascanavigasi harus
+        # diperiksa pada browser sesungguhnya, bukan dinilai gagal di sini.
+
 
 if __name__ == "__main__":
     unittest.main()

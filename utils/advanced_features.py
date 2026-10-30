@@ -485,6 +485,9 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
     for r in calc_results.get("m1_rows", []):
         line(f"- {r[0]} ({r[1]}): DN kerja {r[4]} bpm, %CVL {r[6]}%, "
              f"energi {r[7]} kkal/menit. {r[8]}")
+    for r in calc_results.get("m1_recovery_rows", []):
+        line(f"- Pemulihan {r[0]}: P0-P5={r[1:7]}, ECPT={r[7]} bpm, ECPM={r[8]} bpm; "
+             "indeks nadi, bukan energi dalam kkal.")
 
     section("C. MODUL 02 - PENILAIAN POSTUR")
     for r in calc_results.get("m2_rows", []):
@@ -498,6 +501,8 @@ def generate_pdf_report(session_state: dict, calc_results: dict) -> bytes:
     for r in m3_rows:
         line(f"- {r[0]} {r[1]}: Ws={r[2]} dtk, Wn={r[11]} dtk, Wb={r[12]} dtk; "
              f"keseragaman={r[6]}; kecukupan={r[8]}")
+    for r in calc_results.get("m3_comparison_rows", []):
+        line(f"- {r[0]} / {r[2]}: p={r[4]:g}, Wn={r[9]:g}, Wb={r[10]:g} detik")
 
     section("E. MODUL 04 - ANTROPOMETRI 32 DIMENSI")
     for r in calc_results.get("m4_rows", []):

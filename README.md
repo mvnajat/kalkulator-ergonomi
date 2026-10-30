@@ -12,6 +12,19 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Fase 1 — Audit Rumus dan Upgrade Modul 01 & 03 (Oktober 2026)
+
+- **Modul 01: pemulihan nadi P0–P5.** Form pengamatan untuk dua operator, grafik nadi, perhitungan ECPT, ECPM, perubahan P1–P5, dan persentase pemulihan deskriptif. Hasil ikut ke lembar Excel `01_Pemulihan_Nadi`, PDF modul, dan PDF gabungan. Semua data contoh awal perlu diganti sesuai observasi.
+- **Modul 03: empat faktor penyesuaian per elemen.** Westinghouse (`p=1+skill+effort+condition+consistency`), Schummard (`p=skor/60`), Objektif (`p=(skor/60)×(1+total kesulitan/100)`) dan faktor Akhir (manual, diputuskan praktikan). Input 6 komponen kesulitan **ABT, PK, PT, KMT, PERLT, BB** dan tabel perbandingan Ws/Wn/Wb/output; pilih metode utama untuk ringkasan produk. Lembar Excel tambahan `03_Perbandingan_Metode` dan PDF berisi jejak perbandingan.
+- **Audit %CVL:** penyebut menggunakan `DN maks − DN istirahat` tanpa memaksa minimum 1; data dengan penyebut ≤0 sekarang ditolak. Batas 30% diklasifikasikan sebagai kategori perlu perbaikan, bukan rendah. Jika DN kerja lebih rendah dari DN istirahat, hasil ditandai **perlu verifikasi**.
+- **Audit time study:** allowance dinyatakan sebagai `Wb = Wn / (1−A/100)` dengan `0 ≤ A < 100`, bukan menambahkan 15% ke Wn. Uji kecukupan dan keseragaman menggunakan sampel observasi yang sama pada semua metode. Kapasitas produk **3600/ΣWb** berlaku jika elemen bersama-sama membentuk satu siklus/unit, bukan dengan menjumlah output per elemen.
+
+**Catatan istilah penting:** Nama *Extra Calorie due to Peripheral Temperature/Metabolism* (ECPT/ECPM) pada pedoman praktikum menggunakan operasi terhadap **denyut nadi P0–P5**, sehingga hasil operasi tersebut berupa indeks selisih nadi (bpm), **bukan kalori atau kkal**. Estimasi konsumsi energi di tabel %CVL berasal dari persamaan regresi terpisah; jangan menyamakan kedua jenis keluaran.
+
+**Jejak rumus:** `assets/MODUL-1-8.docx` (panduan praktikum di repository), bagian Modul 01 “Perhitungan ECPT dan ECPM” dan Modul 03 “Penyesuaian Schummard”, “Penyesuaian Westinghouse”, dan “Penyesuaian Obyektif”. Perhitungan ini bertujuan membantu laporan praktikum; interpretasi kesehatan dan kelayakan kondisi kerja memerlukan konteks pengamatan dan penilaian ahli.
+
+**Uji regresi:** `python -m unittest discover -v` mencakup contoh acuan P0–P5, p Schummard/Objektif/Westinghouse/akhir, allowance, data ekstrem, pembulatan ambang %CVL, dan jejak ekspor laporan.
+
 ### Workspace Praktikum — roadmap pengembangan berikutnya
 
 - **Manajer Proyek** (`/proyek`): beri nama proyek, simpan beberapa snapshot selama sesi, ekspor file proyek `.json`, kemudian impor kembali beserta status penyelesaian modul. Berkas proyek bersifat portabel, bukan terikat satu perangkat.
