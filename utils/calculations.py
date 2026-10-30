@@ -57,23 +57,36 @@ def _positive_measurements(values: list) -> np.ndarray:
 
 def hitung_fisiologi_cvl(dn_istirahat: float, dn_kerja: float, usia: int, jk: str = "Laki-laki") -> dict:
     """Menghitung %CVL (Cardiovascular Load), Denyut Nadi Maksimum, dan Konsumsi Energi."""
+    if jk not in ("Laki-laki", "Perempuan"):
+        raise ValueError("Jenis kelamin harus Laki-laki atau Perempuan sesuai acuan modul.")
+    if not all(np.isfinite(float(v)) for v in (dn_istirahat, dn_kerja, usia)):
+        raise ValueError("Usia dan denyut nadi harus angka hingga.")
+    if not 1 <= usia <= 100 or not 30 <= dn_istirahat <= 250 or not 30 <= dn_kerja <= 250:
+        raise ValueError("Periksa usia (1–100 tahun) dan nadi (30–250 bpm).")
     dn_max = (220 - usia) if jk == "Laki-laki" else (200 - usia)
-    denom = max(dn_max - dn_istirahat, 1)
+    denom = dn_max - dn_istirahat
+    if denom <= 0:
+        raise ValueError("Nadi istirahat harus lebih rendah daripada perkiraan nadi maksimum.")
     cvl = ((dn_kerja - dn_istirahat) / denom) * 100.0
-    
-    if cvl <= 30:
-        kategori = "Tidak terjadi kelelahan (< 30%)"
-        tindakan = "Kondisi kerja aman, tidak diperlukan perbaikan segera."
+    cvl_class = round(cvl, 8)  # Hindari salah kategori pada tepat 30% akibat float.
+
+    if cvl_class < 0:
+        kategori = "DN kerja di bawah DN istirahat: cek pengukuran"
+        tindakan = "Ulangi atau verifikasi pengukuran dan waktu pengambilan nadi."
+        level_risiko = "Perlu verifikasi"
+    elif cvl_class < 30:
+        kategori = "Beban kardiovaskular rendah (< 30%)"
+        tindakan = "Pantau kondisi kerja dan verifikasi konteks pengukuran."
         level_risiko = "Rendah"
-    elif cvl <= 60:
+    elif cvl_class <= 60:
         kategori = "Diperlukan perbaikan (30% - 60%)"
         tindakan = "Perlu penyesuaian beban kerja atau pengaturan waktu istirahat."
         level_risiko = "Sedang"
-    elif cvl <= 80:
+    elif cvl_class <= 80:
         kategori = "Kerja dalam waktu singkat (60% - 80%)"
         tindakan = "Batasi durasi kerja kontinu dan jadwalkan istirahat berkala."
         level_risiko = "Tinggi"
-    elif cvl <= 100:
+    elif cvl_class <= 100:
         kategori = "Diperlukan tindakan segera (80% - 100%)"
         tindakan = "Beban fisik terlalu berat! Segera redesain metode kerja/alat."
         level_risiko = "Sangat Tinggi"
@@ -98,6 +111,77 @@ def hitung_fisiologi_cvl(dn_istirahat: float, dn_kerja: float, usia: int, jk: st
         "ke_kerja_kkal_menit": round(ke_kerja, 3),
         "ke_bersih_kkal_menit": round(ke_bersih, 3),
     }
+
+
+def hitung_pemulihan_nadi(pulses: dict) -> dict:
+    """ECPT/ECPM sesuai tabel P0–P5 pada panduan praktikum Modul 01.
+
+    Angka yang dihasilkan merupakan *indeks selisih denyut nadi* (bpm),
+    bukan energi dalam kkal, meskipun nama historisnya memakai 'Calorie'.
+    """
+    labels = tuple(f"P{i}" for i in range(6))
+    try:
+        values = {key: float(pulses[key]) for key in labels}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Data pemulihan harus lengkap dari P0 sampai P5.") from exc
+    if any(not np.isfinite(v) or not 30 <= v <= 250 for v in values.values()):
+        raise ValueError("P0–P5 harus berkisar 30–250 bpm dan bukan NaN/inf.")
+    p0, p1, p2, p3, p4, p5 = (values[key] for key in labels)
+    akhir = (p3 + p4 + p5) / 3
+    ecpt = akhir - p0
+    ecpm = (p1 + p2 - p3) - akhir
+    # Pemulihan dari puncak P1 ke P5 relatif pada selisih P1-P0.
+    recovery = ((p1 - p5) / (p1 - p0) * 100) if p1 > p0 else None
+    return {
+        "rata_akhir": round(akhir, 3),
+        "ecpt": round(ecpt, 3),
+        "ecpm": round(ecpm, 3),
+        "selisih_p1_p5": round(p1 - p5, 3),
+        "pemulihan_persen": round(recovery, 2) if recovery is not None else None,
+        "status": "P1 tidak melebihi P0; persentase pemulihan tidak dihitung."
+                  if recovery is None else
+                  ("P5 di bawah P0; interpretasikan bersama kondisi pengukuran."
+                   if p5 < p0 else "Persentase bersifat deskriptif, bukan diagnosis."),
+    }
+
+
+def hitung_perbandingan_waktu_kerja(
+    observations: list, *, westinghouse: dict, skor_schummard: float,
+    skor_kesulitan: dict, p_akhir: float, allowance_pct: float,
+    k_level: float = 2.0, s_level: float = 0.05,
+) -> dict:
+    """Empat penyesuaian dari data siklus sama, memakai rumus time study tunggal.
+
+    Schummard p1 = skor/60; Objektif p=p1*(1+sum(ABT,PK,PT,KMT,PERLT,BB)/100).
+    Penyesuaian akhir adalah keputusan manual yang harus dijustifikasi praktikan.
+    """
+    try:
+        components = [float(westinghouse[k]) for k in ("skill", "effort", "condition", "consistency")]
+        difficulty = [float(skor_kesulitan.get(k, 0)) for k in ("ABT", "PK", "PT", "KMT", "PERLT", "BB")]
+        skor_schummard = float(skor_schummard)
+        p_akhir = float(p_akhir)
+    except (TypeError, KeyError, ValueError) as exc:
+        raise ValueError("Penilaian metode harus berupa angka dan memiliki komponen lengkap.") from exc
+    if not all(np.isfinite(v) for v in components + difficulty + [skor_schummard, p_akhir]):
+        raise ValueError("Skor dan faktor penyesuaian tidak boleh NaN/inf.")
+    if not 1 <= skor_schummard <= 120 or any(v < 0 or v > 100 for v in difficulty):
+        raise ValueError("Skor Schummard 1–120 dan setiap komponen kesulitan 0–100.")
+    if not 0 < p_akhir <= 3:
+        raise ValueError("Faktor penyesuaian akhir harus >0 dan ≤3.")
+    p1 = skor_schummard / 60
+    p2 = 1 + sum(difficulty) / 100
+    factors = {
+        "Westinghouse": 1 + sum(components),
+        "Schummard": p1,
+        "Objektif": p1 * p2,
+        "Akhir (manual)": p_akhir,
+    }
+    outputs = {
+        method: hitung_waktu_kerja(observations, factor - 1, allowance_pct, k_level, s_level)
+        for method, factor in factors.items()
+    }
+    return {"p1": round(p1, 5), "p2": round(p2, 5),
+            "total_kesulitan": sum(difficulty), "factors": factors, "results": outputs}
 
 
 def hitung_rula(upper_arm: int, lower_arm: int, wrist: int, wrist_twist: int,

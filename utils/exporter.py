@@ -126,6 +126,15 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
         "Operator", "Aktivitas", "Usia (th)", "DN Istirahat (bpm)", "DN Kerja (bpm)",
         "DN Maks (bpm)", "%CVL (%)", "Konsumsi Energi Bersih (kkal/mnt)", "Kategori Beban", "Rekomendasi"
     ], m1_rows)
+    if calc_results.get("m1_recovery_rows"):
+        ws_pulse = wb.create_sheet("01_Pemulihan_Nadi")
+        style_worksheet(ws_pulse, "MODUL 01 - PEMULIHAN NADI P0-P5 / INDEKS ECPT-ECPM")
+        write_table(ws_pulse, 4, [
+            "Operator", "P0 (bpm)", "P1 (bpm)", "P2 (bpm)", "P3 (bpm)",
+            "P4 (bpm)", "P5 (bpm)", "ECPT (bpm)", "ECPM (bpm)",
+            "Pemulihan P1 ke P5 (%)", "Catatan Interpretasi",
+        ], calc_results["m1_recovery_rows"])
+        ws_pulse["A3"] = "ECPT/ECPM adalah indeks selisih nadi (bpm), bukan nilai energi kkal."
 
     # 3. Sheet Modul 02 Postur (RULA, OWAS, REBA)
     ws_m2 = wb.create_sheet("02_Postur_Kerja")
@@ -143,6 +152,15 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
         "Kode", "Elemen Kerja", "Ws Rata-rata (dtk)", "SD (dtk)", "BKB", "BKA",
         "Keseragaman", "N'", "Kecukupan", "Faktor p", "Allowance (%)", "Wn (dtk)", "Wb (dtk)", "Output Standar (unit/jam)"
     ], m3_rows)
+    if calc_results.get("m3_comparison_rows"):
+        ws_rates = wb.create_sheet("03_Perbandingan_Metode")
+        style_worksheet(ws_rates, "MODUL 03 - SCHUMMARD, WESTINGHOUSE, OBJEKTIF DAN AKHIR")
+        ws_rates["A3"] = "Faktor p: Schummard=skor/60; Objektif=p1*(1+total/100); Akhir=manual."
+        write_table(ws_rates, 4, [
+            "Kode", "Elemen Kerja", "Metode", "Ws (dtk)", "Faktor p", "Schummard p1",
+            "Objektif p2", "Total Kesulitan", "Allowance (%)", "Wn (dtk)", "Wb (dtk)",
+            "Output per Elemen (unit/jam)", "N'", "Kecukupan", "Keseragaman",
+        ], calc_results["m3_comparison_rows"])
 
     # 5. Sheet Modul 04 Antropometri 32 Dimensi
     ws_m4 = wb.create_sheet("04_Antropometri_32D")
@@ -268,7 +286,13 @@ def export_session_to_excel(state_dict: dict, calc_results: dict) -> bytes:
     write_table(ws_env_raw, 4, ["Modul", "Parameter", "Percobaan 1", "Percobaan 2", "Percobaan 3"], observations)
 
     # Data mentah ditempatkan di samping ringkasan yang relevan.
-    order = ["00_Identitas", "01_Fisiologi", "02_Postur_Kerja", "03_Waktu_Kerja", "03_Data_Mentah",
+    order = ["00_Identitas", "01_Fisiologi"]
+    if "01_Pemulihan_Nadi" in wb:
+        order.append("01_Pemulihan_Nadi")
+    order += ["02_Postur_Kerja", "03_Waktu_Kerja"]
+    if "03_Perbandingan_Metode" in wb:
+        order.append("03_Perbandingan_Metode")
+    order += ["03_Data_Mentah",
              "04_Antropometri_32D", "04_Data_Mentah", "05_Antropometri_Lanjutan", "05_Data_Mentah",
              "06_08_Lingkungan_Kerja", "06_08_Data_Mentah", "09_MMH"]
     if "09_Simulasi" in wb:

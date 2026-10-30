@@ -12,6 +12,8 @@ import streamlit as st
 from utils.calculations import (
     ANTROPOMETRI_32_DIMENSI,
     hitung_fisiologi_cvl,
+    hitung_pemulihan_nadi,
+    hitung_perbandingan_waktu_kerja,
     hitung_rula,
     hitung_owas,
     hitung_reba,
@@ -336,6 +338,10 @@ def init_session_state():
         "op2_akt2_nama": "Inspeksi & Pengemasan Duduk",
         "op2_akt2_dni": 76.0,
         "op2_akt2_dnk": 95.0,
+        "pemulihan": {
+            "op1": {"P0": 82.0, "P1": 115.0, "P2": 86.0, "P3": 85.0, "P4": 83.0, "P5": 75.0},
+            "op2": {"P0": 88.0, "P1": 111.0, "P2": 92.0, "P3": 92.0, "P4": 90.0, "P5": 86.0},
+        },
     }
 
     st.session_state["modul_02"] = {
@@ -388,6 +394,12 @@ def init_session_state():
         "allowance_hambatan": 3.0,
         "k_level": 2.0,
         "s_level": 0.05,
+        "rating_rows": [
+            {"Kode": kode, "Skor Schummard": 60.0,
+             **{key: 0.0 for key in ("ABT", "PK", "PT", "KMT", "PERLT", "BB")},
+             "p akhir": 1.0} for kode, _ in elemen_names
+        ],
+        "metode_terpilih": "Westinghouse",
     }
 
     default_means = [
@@ -527,12 +539,32 @@ def compile_all_calculations() -> dict:
         (id_info["op2_nama"], m1["op2_akt1_nama"], id_info["op2_usia"], id_info["op2_jk"], m1["op2_akt1_dni"], m1["op2_akt1_dnk"]),
         (id_info["op2_nama"], m1["op2_akt2_nama"], id_info["op2_usia"], id_info["op2_jk"], m1["op2_akt2_dni"], m1["op2_akt2_dnk"]),
     ]
+    m1_invalid = []
     for op_nama, akt_nama, usia, jk, dni, dnk in configs_m1:
-        res = hitung_fisiologi_cvl(dni, dnk, int(usia), jk)
+        try:
+            res = hitung_fisiologi_cvl(dni, dnk, int(usia), jk)
+        except (ValueError, TypeError) as exc:
+            m1_invalid.append(f"{op_nama} / {akt_nama}: {exc}")
+            continue
         m1_list.append([
             op_nama, akt_nama, usia, dni, dnk,
             res["dn_max"], res["cvl_persen"], res["ke_bersih_kkal_menit"],
             res["kategori"], res["tindakan"]
+        ])
+
+    m1_recovery = []
+    for op in ("op1", "op2"):
+        points = m1.get("pemulihan", {}).get(op)
+        if not points:
+            continue
+        try:
+            recovery = hitung_pemulihan_nadi(points)
+        except (ValueError, TypeError) as exc:
+            m1_invalid.append(f"Pemulihan {id_info[op + '_nama']}: {exc}")
+            continue
+        m1_recovery.append([
+            id_info[op + "_nama"], *(points[f"P{i}"] for i in range(6)),
+            recovery["ecpt"], recovery["ecpm"], recovery["pemulihan_persen"], recovery["status"],
         ])
 
     m2_list = []
@@ -550,18 +582,41 @@ def compile_all_calculations() -> dict:
         m2_list.append([rec["operator"], rec["aktivitas"], "REBA", f"Skor {reba_res['final_score']}", f"Level {reba_res['action_level']}", reba_res["kategori"], reba_res["rekomendasi"]])
 
     m3_state = st.session_state["modul_03"]
-    p_west = sum(m3_state["westinghouse"].values())
     allow_total = m3_state["allowance_pribadi"] + m3_state["allowance_kelelahan"] + m3_state["allowance_hambatan"]
     m3_list = []
+    m3_comparison = []
+    m3_errors = []
+    rating_map = {str(r.get("Kode")): r for r in m3_state.get("rating_rows", [])}
+    selected_method = m3_state.get("metode_terpilih", "Westinghouse")
     for row in m3_state["df_siklus"]:
         obs = [row.get(f"S{i+1}", 0.0) for i in range(10)]
-        res = hitung_waktu_kerja(obs, p_west, allow_total, m3_state["k_level"], m3_state["s_level"])
+        profile = rating_map.get(str(row.get("Kode")), {})
+        try:
+            comparison = hitung_perbandingan_waktu_kerja(
+                obs, westinghouse=m3_state["westinghouse"],
+                skor_schummard=profile.get("Skor Schummard", 60),
+                skor_kesulitan=profile, p_akhir=profile.get("p akhir", 1.0),
+                allowance_pct=allow_total, k_level=m3_state["k_level"], s_level=m3_state["s_level"],
+            )
+        except (ValueError, TypeError) as exc:
+            m3_errors.append(f"{row.get('Kode', '?')}: {exc}")
+            continue
+        res = comparison["results"].get(selected_method, comparison["results"]["Westinghouse"])
         if res:
             m3_list.append([
                 row["Kode"], row["Elemen Kerja"], res["ws"], res["std"], res["bkb"], res["bka"],
                 res["seragam"], res["n_prime"], res["cukup"], res["p_factor"], res["allowance_pct"],
                 res["wn"], res["wb"], res["output_standar_per_jam"]
             ])
+            for method, alternative in comparison["results"].items():
+                m3_comparison.append([
+                    row["Kode"], row["Elemen Kerja"], method, alternative["ws"],
+                    round(comparison["factors"][method], 5), comparison["p1"],
+                    comparison["p2"], comparison["total_kesulitan"],
+                    alternative["allowance_pct"], alternative["wn"], alternative["wb"],
+                    alternative["output_standar_per_jam"], alternative["n_prime"],
+                    alternative["cukup"], alternative["seragam"],
+                ])
 
     m4_list = []
     for row in st.session_state["modul_04"]["df_32"]:
@@ -612,8 +667,12 @@ def compile_all_calculations() -> dict:
 
     return {
         "m1_rows": m1_list,
+        "m1_recovery_rows": m1_recovery,
+        "m1_errors": m1_invalid,
         "m2_rows": m2_list,
         "m3_rows": m3_list,
+        "m3_comparison_rows": m3_comparison,
+        "m3_errors": m3_errors,
         "m4_rows": m4_list,
         "m5_rows": m5_list,
         "env_rows": env_list,
@@ -1142,10 +1201,47 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.markdown("#### 📊 Hasil Perhitungan Fisiologi Kerja (%CVL & Konsumsi Energi)")
         st.dataframe(df_m1, use_container_width=True, hide_index=True)
 
+        for message in calc_all.get("m1_errors", []):
+            st.error(f"Periksa data: {message}")
+
+        st.markdown("#### 💓 Pemulihan Denyut Nadi (P0–P5), ECPT & ECPM")
+        st.caption("Masukkan nadi terukur dalam bpm. P0 = sebelum kerja; P1–P5 = pengamatan saat/setelah aktivitas sesuai protokol praktikum. "
+                   "Contoh isian awal hanya ilustrasi dan harus diganti dengan hasil pengamatan.")
+        m1.setdefault("pemulihan", {})
+        pulse_defaults = {"op1": (82, 115, 86, 85, 83, 75), "op2": (88, 111, 92, 92, 90, 86)}
+        recovery_cols = st.columns(2, gap="large")
+        for idx, op in enumerate(("op1", "op2")):
+            with recovery_cols[idx]:
+                st.markdown(f"**{id_info[op + '_nama']}**")
+                points = m1["pemulihan"].setdefault(op, {f"P{i}": float(p) for i, p in enumerate(pulse_defaults[op])})
+                for group in (("P0", "P1", "P2"), ("P3", "P4", "P5")):
+                    cols = st.columns(3)
+                    for col, label in zip(cols, group):
+                        points[label] = col.number_input(
+                            f"{label} (bpm) · {op.upper()}", min_value=30.0, max_value=250.0,
+                            value=float(points.get(label, pulse_defaults[op][int(label[1])])), step=1.0,
+                            key=f"pulse_{op}_{label}",
+                        )
+        calc_all = compile_all_calculations()
+        recovery_rows = calc_all.get("m1_recovery_rows", [])
+        if recovery_rows:
+            st.dataframe(pd.DataFrame(recovery_rows, columns=[
+                "Operator", "P0", "P1", "P2", "P3", "P4", "P5", "ECPT (bpm)",
+                "ECPM (bpm)", "Pemulihan P1→P5 (%)", "Catatan",
+            ]), use_container_width=True, hide_index=True)
+            chart = pd.DataFrame({r[0]: r[1:7] for r in recovery_rows}, index=[f"P{i}" for i in range(6)])
+            st.line_chart(chart, x_label="Titik pengamatan", y_label="Denyut nadi (bpm)")
+        with st.expander("🔎 Rumus dan interpretasi ECPT/ECPM", expanded=False):
+            st.latex(r"ECPT = \frac{P3+P4+P5}{3}-P0")
+            st.latex(r"ECPM = (P1+P2-P3)-\frac{P3+P4+P5}{3}")
+            st.caption("Sesuai rumus di pedoman praktikum Modul 01 (MODUL-1-8.docx). "
+                       "Meski nama historisnya *Extra Calorie*, operasi ini menggunakan nadi: satuan selisihnya bpm, "
+                       "**bukan energi kkal**. Nilai negatif dipertahankan untuk analisis, bukan dipaksa nol.")
+
         high_cvl = [r for r in calc_all["m1_rows"] if r[6] > 30.0]
         if high_cvl:
             st.warning(f"⚠️ **Validasi Fisiologi Otomatis:** Terdapat {len(high_cvl)} aktivitas dengan nilai **%CVL > 30%** ({', '.join(r[1] for r in high_cvl)}). Diperlukan penjadwalan waktu istirahat atau rotasi operator.")
-        else:
+        elif not calc_all.get("m1_errors"):
             st.success("✅ **Validasi Fisiologi Otomatis:** Seluruh aktivitas memiliki beban kardiovaskular %CVL ≤ 30% (Aman tanpa kelelahan berarti).")
 
         st.session_state["analisis_modul"]["Modul 01"] = st.text_area(
@@ -1263,7 +1359,7 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             use_container_width=True, num_rows="dynamic",
         )
 
-        st.markdown("##### 2. Penyesuaian (Westinghouse Rating) & Kelonggaran (Allowance)")
+        st.markdown("##### 2. Penyesuaian Westinghouse & Kelonggaran (Allowance)")
         w1, w2, w3, w4 = st.columns(4)
         m3["westinghouse"]["skill"] = w1.number_input("Skill (Keterampilan)", -0.22, 0.15, float(m3["westinghouse"]["skill"]), step=0.01)
         m3["westinghouse"]["effort"] = w2.number_input("Effort (Usaha)", -0.17, 0.13, float(m3["westinghouse"]["effort"]), step=0.01)
@@ -1275,23 +1371,84 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         m3["allowance_kelelahan"] = al2.number_input("Kelonggaran Menghilangkan Kelelahan (%)", 0.0, 30.0, float(m3["allowance_kelelahan"]), step=0.5)
         m3["allowance_hambatan"] = al3.number_input("Kelonggaran Hambatan Tak Terhindarkan (%)", 0.0, 20.0, float(m3["allowance_hambatan"]), step=0.5)
 
+        st.markdown("##### 3. Schummard, Tingkat Kesulitan Objektif, dan Penyesuaian Akhir")
+        st.caption("Setiap elemen memiliki skor Schummard (p1 = skor/60), enam skor kesulitan (p2 = 1 + Σ skor/100), "
+                   "dan p akhir manual. Westinghouse berlaku sama untuk seluruh elemen; sesuaikan skor dengan pengamatan.")
+        profile_map = {str(item.get("Kode")): item for item in m3.get("rating_rows", [])}
+        rating_rows = []
+        for item in m3["df_siklus"]:
+            code = str(item.get("Kode", "")).strip()
+            if not code:
+                continue
+            profile = profile_map.get(code, {})
+            rating_rows.append({
+                "Kode": code,
+                "Skor Schummard": float(profile.get("Skor Schummard", 60)),
+                **{key: float(profile.get(key, 0)) for key in ("ABT", "PK", "PT", "KMT", "PERLT", "BB")},
+                "p akhir": float(profile.get("p akhir", 1)),
+            })
+        # Pergantian kode/jumlah elemen harus membangun ulang basis editor.
+        rating_scope = hashlib.sha256("|".join(r["Kode"] for r in rating_rows).encode()).hexdigest()[:10]
+        m3["rating_rows"] = edit_table_rows(
+            st.session_state, rating_rows, f"ed_m3_rating_{rating_scope}", st.data_editor,
+            use_container_width=True, num_rows="fixed", hide_index=True, disabled=["Kode"],
+        ) if rating_rows else []
+        st.caption("ABT: anggota badan terpakai, PK: pedal kaki, PT: penggunaan tangan, "
+                   "KMT: koordinasi mata-tangan, PERLT: peralatan, BB: berat beban. "
+                   "p akhir adalah keputusan praktikan, **bukan rata-rata otomatis** ketiga metode.")
+        method_options = ["Westinghouse", "Schummard", "Objektif", "Akhir (manual)"]
+        current_method = m3.get("metode_terpilih", "Westinghouse")
+        m3["metode_terpilih"] = st.selectbox(
+            "Metode yang digunakan untuk hasil utama, total waktu baku, dan kapasitas:",
+            method_options, index=method_options.index(current_method) if current_method in method_options else 0,
+        )
+
         calc_all = compile_all_calculations()
+        for message in calc_all.get("m3_errors", []):
+            st.error(f"Elemen belum dapat dihitung: {message}")
         df_res_m3 = pd.DataFrame(calc_all["m3_rows"], columns=[
             "Kode", "Elemen Kerja", "Ws (dtk)", "SD", "BKB", "BKA",
             "Uji Keseragaman", "N'", "Uji Kecukupan", "Faktor p", "Allowance (%)", "Wn (dtk)", "Wb (dtk)", "Output Standar (unit/jam)"
         ])
-        st.markdown("##### 3. Hasil Perhitungan Waktu Siklus, Waktu Normal, Waktu Baku, & Uji Data")
+        st.markdown("##### 4. Hasil Perhitungan Utama, Waktu Normal, Waktu Baku & Uji Data")
         st.dataframe(df_res_m3, use_container_width=True, hide_index=True)
+
+        st.markdown("##### 5. Perbandingan Empat Metode per Elemen")
+        df_compare = pd.DataFrame(calc_all.get("m3_comparison_rows", []), columns=[
+            "Kode", "Elemen Kerja", "Metode", "Ws (dtk)", "Faktor p", "Schummard p1",
+            "Objektif p2", "Total kesulitan", "Allowance (%)", "Wn (dtk)", "Wb (dtk)",
+            "Output (unit/jam)", "N'", "Uji Kecukupan", "Uji Keseragaman",
+        ])
+        st.dataframe(df_compare, use_container_width=True, hide_index=True)
+        if not df_compare.empty:
+            recap = df_compare.groupby("Metode", sort=False).agg(
+                **{"Total Wb (detik)": ("Wb (dtk)", "sum"), "Jumlah elemen": ("Kode", "count")}
+            ).reset_index()
+            recap["Kapasitas (unit/jam)"] = 3600 / recap["Total Wb (detik)"].replace(0, np.nan)
+            st.dataframe(recap, use_container_width=True, hide_index=True)
+            st.caption("Kapasitas gabungan = 3600 / Σ Wb hanya untuk urutan elemen yang membentuk satu unit produk. "
+                       "Output per elemen tidak boleh dijumlahkan sebagai output produk.")
+        with st.expander("🧮 Cara memperoleh faktor penyesuaian", expanded=False):
+            st.latex(r"p_{Schummard}=\frac{skor}{60}")
+            st.latex(r"p_{Objektif}=p_{Schummard}\left(1+\frac{ABT+PK+PT+KMT+PERLT+BB}{100}\right)")
+            st.latex(r"p_{Westinghouse}=1+skill+effort+condition+consistency")
+            st.latex(r"W_n=W_s\cdot p; \quad W_b=\frac{W_n}{1-a/100}; \quad Output=\frac{3600}{W_b}")
+            st.caption("Acuan metode Schummard/Objektif: panduan praktikum Modul 03 (MODUL-1-8.docx). "
+                       "Uji keseragaman memakai batas rata-rata ± k·SD; kecukupan memakai N'.")
 
         tidak_cukup = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[8]) or "Belum" in str(r[8])]
         tidak_seragam = [r[0] for r in calc_all["m3_rows"] if "Tidak" in str(r[6])]
-        if tidak_seragam or tidak_cukup:
+        if tidak_seragam or tidak_cukup or calc_all.get("m3_errors"):
             st.error(f"⚠️ **Peringatan Validasi Statistik:** Elemen tidak seragam: {tidak_seragam or 'Tidak ada'} | Elemen belum cukup (N < N'): {tidak_cukup or 'Tidak ada'}. Lakukan pengambilan sampel tambahan atau revisi data ekstrem (outlier).")
         else:
             st.success("✅ **Validasi Statistik Time Study:** Seluruh elemen kerja telah **Seragam (dalam batas BKA-BKB)** dan **Cukup (N ≥ N')**.")
 
         total_wb = df_res_m3["Wb (dtk)"].sum() if not df_res_m3.empty else 0.0
-        st.metric("Total Waktu Baku Siklus Produk (Σ Wb)", f"{total_wb:.2f} detik/unit", f"Kapasitas Produksi: {3600/total_wb:.1f} unit/jam" if total_wb > 0 else "")
+        if len(df_res_m3) == len(m3["df_siklus"]) and total_wb > 0:
+            st.metric(f"Total Waktu Baku — {m3['metode_terpilih']} (Σ Wb)",
+                      f"{total_wb:.2f} detik/unit", f"Kapasitas: {3600/total_wb:.1f} unit/jam")
+        else:
+            st.warning("Total waktu baku produk belum ditampilkan karena ada elemen tanpa hasil valid.")
         st.session_state["analisis_modul"]["Modul 03"] = st.text_area(
             "Analisis & Pembahasan Modul 03:", value=st.session_state["analisis_modul"]["Modul 03"]
         )
