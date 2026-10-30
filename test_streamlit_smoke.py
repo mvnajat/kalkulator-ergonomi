@@ -27,12 +27,34 @@ class StreamlitSmokeTests(unittest.TestCase):
     def test_every_module_page_opens_without_exception(self):
         from streamlit.testing.v1 import AppTest
 
-        for nomor in ("01", "02", "03", "04", "05", "09"):
+        for nomor in ("01", "02", "03", "04", "05", "06", "07", "08", "09"):
             with self.subTest(modul=nomor):
                 app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
                 app.button(key=f"open_Modul {nomor}").click().run()
                 self.assertFalse(app.exception)
                 self.assertEqual(app.session_state["_active_page_slug"], f"modul-{nomor}")
+                self.assertEqual(app.selectbox(key=f"ux_mode_{nomor}").value, "Pemula")
+                self.assertEqual(len(app.tabs), 8 if nomor == "09" else 6 if nomor == "02" else 4)
+                self.assertTrue(any(b.key == f"module_report_modul-{nomor}" for b in app.button))
+                self.assertTrue(any(c.key == f"done_modul-{nomor}" for c in app.checkbox))
+
+    def test_beginner_home_guides_first_time_visitors(self):
+        from streamlit.testing.v1 import AppTest
+
+        app_path = str(Path(__file__).with_name("app.py"))
+        app = AppTest.from_file(app_path, default_timeout=45).run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any(b.key == "home_start" for b in app.button))
+        self.assertTrue(any(b.key == "home_demo" for b in app.button))
+        self.assertTrue(any(b.key == "home_dismiss_guide" for b in app.button))
+        self.assertEqual(app.session_state["ux_mode"], "Pemula")
+        app.button(key="home_dismiss_guide").click().run()
+        self.assertFalse(app.exception)
+        self.assertTrue(app.session_state["ux_guide_dismissed"])
+        # AppTest 1.40 mengekspos elemen sebelum st.rerun diproses;
+        # render sekali lagi agar pohon elemen sesuai state akhir.
+        app.run()
+        self.assertFalse(any(b.key == "home_dismiss_guide" for b in app.button))
 
     def test_report_page_opens_from_home(self):
         from streamlit.testing.v1 import AppTest
@@ -61,7 +83,7 @@ class StreamlitSmokeTests(unittest.TestCase):
         app.button(key="open_Modul 09").click().run()
         self.assertFalse(app.exception)
         self.assertEqual(app.session_state["_active_page_slug"], "modul-09")
-        self.assertEqual(len(app.tabs), 4)
+        self.assertEqual(len(app.tabs), 8)
         self.assertEqual(app.session_state["modul_09_simulasi"]["h_cm"], 25.0)
         self.assertEqual(app.session_state["modul_09"]["h_cm"], 32.0)
         self.assertTrue(any(button.key == "atas_back_list" for button in app.button))

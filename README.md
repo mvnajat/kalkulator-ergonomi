@@ -4,13 +4,24 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Daftar Perbaikan Utama dari Versi Sebelumnya
 1. **Navigasi Modern (Tanpa Radio Button):** Mengganti komponen `st.radio` horizontal di bagian atas dengan tombol navigasi berbentuk *pill bar* yang responsif.
-2. **Proporsi Layar Lebar (`layout="wide"`):** Mengoptimalkan lebar kontainer (`max-width: 1420px`) sehingga kartu modul tidak sempit atau berdesakan di monitor 16:9.
+2. **Proporsi Layar Lebar (`layout="wide"`):** Mengoptimalkan lebar kontainer (`max-width: 1260px`) agar teks, tombol, dan kartu modul mudah diikuti di monitor maupun laptop.
 3. **Konsistensi Tema Forest Green:** Mengganti kotak peringatan biru (`st.info`) yang bertabrakan warna dengan komponen `.emerald-notice` bertema hijau zambrud gelap.
 4. **Integrasi Penuh RULA, OWAS, & REBA:** Menyatukan perhitungan **REBA** ke dalam **Modul 02 (Postur Kerja)** dan menautkannya langsung dengan metrik **Ringkasan Praktikum** di Beranda.
 5. **Sinkronisasi Zona Waktu WIB (`Asia/Jakarta`):** Memperbaiki waktu server yang sebelumnya mengikuti UTC agar selalu akurat dengan Waktu Indonesia Barat (WIB).
 6. **Ekspor Excel Multi-Sheet & Pemulihan JSON:** Dilengkapi laporan `.xlsx` berformat rapi (12 sheet dasar, plus 1 sheet simulasi bila tersedia) dan fitur *Backup/Restore* `.json` agar praktikan tidak kehilangan data saat browser ter-refresh.
 
 ## Pembaruan Terbaru
+
+### Fase 1.5 — Penyederhanaan UI/UX dan Onboarding (Oktober 2026)
+
+- **Beranda untuk pengguna baru:** dua aksi utama (**Mulai praktikum** dan **Coba Modul 01**), panduan tiga langkah yang bisa ditutup, progres 9 modul, serta penjelasan bahwa data bawaan adalah simulasi.
+- **Navigasi utama lebih ringkas:** Beranda, Daftar Modul, Identitas, Proyek Saya, dan Laporan. Dashboard, Impor Excel, Ruang Belajar, dan Kalkulator Postur tetap tersedia dari menu pendukung atau kartu beranda.
+- **Empat tahap konsisten di setiap modul:** **1 · Data**, **2 · Hasil**, **3 · Analisis**, dan **4 · Panduan & Laporan**. Input, keluaran, catatan pembahasan, penelusuran rumus, dan tanda selesai kini ditempatkan sesuai urutan belajar. Modul 02 dan 09 tetap memiliki subtab khusus metodenya.
+- **Mode Pemula/Lanjutan:** mode Pemula memberi arahan singkat dan meringkas tampilan perbandingan teknis; mode Lanjutan memperluas bagian tersebut. Rumus dan hasil perhitungan **tidak berubah** karena pilihan mode.
+- **Desain yang seragam:** kontainer lebih nyaman dibaca, warna tombol aksi lebih jelas, kartu beranda lebih fokus, dan tab dapat di-scroll pada layar HP. Tombol pindah modul di bagian atas/bawah dan tombol kembali browser tetap bekerja.
+- **Tes regresi UI:** pengujian otomatis mencakup kesembilan modul, jumlah tab, pintasan ke laporan, panduan awal, dan keberadaan kontrol utama; tes numerik dari Fase 1 tetap dijalankan.
+
+**Alur singkat pertama kali menggunakan:** Buka **Mulai praktikum** → isi identitas → pilih modul → masukkan data pengukuran di tab **Data** → periksa **Hasil** → tulis **Analisis** → baca **Panduan & Laporan** → unduh cadangan atau laporan. Data contoh harus diganti sebelum dipakai sebagai laporan observasi.
 
 ### Fase 1 — Audit Rumus dan Upgrade Modul 01 & 03 (Oktober 2026)
 
@@ -25,7 +36,7 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 **Uji regresi:** `python -m unittest discover -v` mencakup contoh acuan P0–P5, p Schummard/Objektif/Westinghouse/akhir, allowance, data ekstrem, pembulatan ambang %CVL, dan jejak ekspor laporan.
 
-### Workspace Praktikum — roadmap pengembangan berikutnya
+### Workspace Praktikum — fitur yang tersedia
 
 - **Manajer Proyek** (`/proyek`): beri nama proyek, simpan beberapa snapshot selama sesi, ekspor file proyek `.json`, kemudian impor kembali beserta status penyelesaian modul. Berkas proyek bersifat portabel, bukan terikat satu perangkat.
 - **Cloud proyek pribadi (opsional)**: bila pengelola telah menyiapkan autentikasi OIDC dan PostgreSQL SSL, praktikan bisa menyimpan/membuka proyek sesuai identitas akun (`sub`) dan memilih **autosave**. Aplikasi tidak menyimpan proyek pribadi ke SQLite bersama. Tanpa pengaturan cloud, gunakan file proyek `.json`; snapshot sesi *tidak permanen* setelah refresh.
