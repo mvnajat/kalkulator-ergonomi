@@ -24,7 +24,7 @@ from utils.calculations import (
 from utils.exporter import export_session_to_json, export_session_to_excel, restore_session_from_json
 from utils.workspace import (
     create_project_file, read_project_file, normalize_project_name,
-    cloud_save, cloud_list, cloud_load,
+    cloud_save, cloud_list, cloud_load, google_auth_is_ready, oidc_subject,
 )
 from utils.importer import make_excel_template, read_excel_observations
 from utils.education import LESSONS, worked_example
@@ -839,11 +839,39 @@ def configured_project_db() -> str:
 
 def signed_in_user_id() -> str:
     try:
-        user = st.user
-        subject = user.get("sub") if user.is_logged_in else None
-        return str(subject).strip() if subject else ""
-    except (AttributeError, KeyError, TypeError):
+        return oidc_subject(st.user)
+    except Exception:
         return ""
+
+
+def login_configured() -> bool:
+    try:
+        return google_auth_is_ready(st.secrets)
+    except Exception:
+        return False
+
+
+def render_login_widget() -> None:
+    """Keep Google account actions visible in the support sidebar."""
+    st.markdown("#### 🔐 Akun Google")
+    if not configured_project_db():
+        st.caption("Cloud belum tersedia. Simpan proyek melalui file JSON.")
+        return
+    if not login_configured():
+        st.caption("Login Google belum dikonfigurasi oleh pengelola.")
+        return
+    if signed_in_user_id():
+        profile = st.user
+        display_name = str(profile.get("name") or profile.get("email") or "Pengguna Google")
+        st.caption("Masuk sebagai")
+        st.text(display_name)
+        if st.button("Keluar dari Google", key="_sidebar_logout", use_container_width=True):
+            st.session_state["_cloud_autosave"] = False
+            st.logout()
+    else:
+        st.caption("Masuk untuk menyimpan proyek praktikum pribadi di cloud.")
+        if st.button("🔐 Masuk dengan Google", key="_sidebar_login", use_container_width=True):
+            st.login()
 
 
 def render_dashboard() -> None:
@@ -928,13 +956,22 @@ def render_project_manager() -> None:
         st.info("Cloud belum diaktifkan oleh pengelola. Gunakan file proyek JSON untuk "
                 "penyimpanan permanen. Database server lokal tidak digunakan untuk proyek pribadi.")
         return
+    if not login_configured():
+        st.warning("Database sudah terhubung, tetapi Login Google belum dikonfigurasi.")
+        return
     owner = signed_in_user_id()
     if not owner:
-        st.warning("Masuk dengan akun pribadi sebelum menyimpan ke cloud.")
-        if hasattr(st, "login") and st.button("Masuk dengan akun terkonfigurasi"):
+        st.info("Masuk dengan Google untuk menyimpan dan membuka proyek pribadi di cloud.")
+        if st.button("🔐 Masuk dengan Google", key="project_google_login"):
             st.login()
         return
-    st.success("Akun terverifikasi. Proyek hanya ditampilkan untuk akun ini.")
+    profile = st.user
+    st.success("Akun Google terverifikasi. Penyimpanan pribadi siap digunakan.")
+    st.caption(f"Masuk sebagai: {profile.get('email') or profile.get('name') or 'Pengguna'}")
+    st.caption("Hanya proyek milik akun ini yang dapat dibuka. Data sesi belum tersimpan sampai Anda menyimpan proyek.")
+    if st.button("Keluar dari Google", key="project_google_logout"):
+        st.session_state["_cloud_autosave"] = False
+        st.logout()
     st.checkbox("Aktifkan simpan otomatis ke cloud saat data berubah", key="_cloud_autosave")
     if st.button("☁️ Simpan proyek ke cloud sekarang") and serialized:
         try:
@@ -1046,6 +1083,8 @@ for idx, (label, slug) in enumerate(nav_options):
             go_to_page(slug)
 
 with st.sidebar:
+    render_login_widget()
+    st.divider()
     st.markdown("### Menu pendukung")
     st.caption(f"Proyek: {st.session_state['project_name']}")
     for sidebar_slug, sidebar_label in (
