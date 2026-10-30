@@ -607,6 +607,73 @@ def compile_all_calculations() -> dict:
     }
 
 
+# Setiap modul memiliki URL sendiri; navigasi antarlaman tetap menggunakan
+# st.switch_page agar session_state dan data pengamatan tidak direset.
+MODULE_PAGE_TITLES = {
+    "modul-01": "Modul 01 - Fisiologi Kerja",
+    "modul-02": "Modul 02 - Postur Kerja",
+    "modul-03": "Modul 03 - Pengukuran Waktu Kerja",
+    "modul-04": "Modul 04 - Antropometri 32 Dimensi",
+    "modul-05": "Modul 05 - Antropometri Lanjutan",
+    "modul-06": "Modul 06 - Temperatur",
+    "modul-07": "Modul 07 - Kebisingan",
+    "modul-08": "Modul 08 - Pencahayaan",
+    "modul-09": "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)",
+}
+MODULE_ORDER = list(MODULE_PAGE_TITLES)
+STATIC_PAGES = {
+    "beranda": "Beranda",
+    "daftar-modul": "Daftar Modul",
+    "identitas": "Identitas",
+    "analisis-postur": "Analisis Postur (RULA/OWAS/REBA)",
+    "laporan": "Laporan & Cadangan",
+}
+
+
+def activate_page(slug: str) -> None:
+    st.session_state["_active_page_slug"] = slug
+    if slug in MODULE_PAGE_TITLES:
+        st.session_state["nav_page"] = "Modul Praktikum"
+        st.session_state["selected_modul"] = MODULE_PAGE_TITLES[slug]
+    else:
+        st.session_state["nav_page"] = STATIC_PAGES[slug]
+
+
+def page_handler(slug: str):
+    return lambda: activate_page(slug)
+
+
+PAGES = {
+    slug: st.Page(page_handler(slug), title=title, url_path=slug,
+                  default=slug == "beranda")
+    for slug, title in {**STATIC_PAGES, **MODULE_PAGE_TITLES}.items()
+}
+st.navigation(list(PAGES.values()), position="hidden").run()
+
+
+def go_to_page(slug: str) -> None:
+    st.switch_page(PAGES[slug])
+
+
+def render_module_navigation(place: str) -> None:
+    slug = st.session_state["_active_page_slug"]
+    idx = MODULE_ORDER.index(slug)
+    back_col, prev_col, progress_col, next_col = st.columns([1.35, 1.25, 2.1, 1.25])
+    with back_col:
+        if st.button("← Daftar Modul", key=f"{place}_back_list", use_container_width=True):
+            go_to_page("daftar-modul")
+    with prev_col:
+        if st.button("← Sebelumnya", key=f"{place}_prev", use_container_width=True, disabled=idx == 0):
+            go_to_page(MODULE_ORDER[idx - 1])
+    with progress_col:
+        st.caption(f"Modul {idx + 1:02d} dari {len(MODULE_ORDER)} · Data tersimpan selama sesi aktif")
+        st.progress((idx + 1) / len(MODULE_ORDER))
+    with next_col:
+        if st.button("Berikutnya →", key=f"{place}_next", use_container_width=True,
+                     disabled=idx == len(MODULE_ORDER) - 1):
+            go_to_page(MODULE_ORDER[idx + 1])
+
+
 # -----------------------------------------------------------------------------
 # 4. LOGO & NAMA UNIVERSITAS DI POJOK KIRI ATAS LAYAR + BAR MENU NAVIGASI
 # -----------------------------------------------------------------------------
@@ -623,16 +690,20 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-nav_options = ["Beranda", "Identitas", "Modul Praktikum", "Analisis Postur (RULA/OWAS/REBA)", "Laporan & Cadangan"]
-nav_cols = st.columns([1.15, 1.15, 1.45, 2.25, 1.6])
+nav_options = [
+    ("Beranda", "beranda"), ("Daftar Modul", "daftar-modul"),
+    ("Identitas", "identitas"), ("Analisis Postur (RULA/OWAS/REBA)", "analisis-postur"),
+    ("Laporan & Cadangan", "laporan"),
+]
+nav_cols = st.columns([1.15, 1.4, 1.15, 2.25, 1.6])
 
-for idx, label in enumerate(nav_options):
+for idx, (label, slug) in enumerate(nav_options):
     with nav_cols[idx]:
-        is_active = (st.session_state["nav_page"] == label)
+        is_active = (st.session_state["_active_page_slug"] == slug or
+                     (slug == "daftar-modul" and st.session_state["_active_page_slug"] in MODULE_PAGE_TITLES))
         btn_label = f"🟢 {label}" if is_active else label
         if st.button(btn_label, key=f"nav_btn_{idx}", use_container_width=True):
-            st.session_state["nav_page"] = label
-            st.rerun()
+            go_to_page(slug)
 
 # A table's source must remain unchanged during cell edits. When the user
 # leaves the worksheet, its next visit will use the last saved values.
@@ -654,7 +725,10 @@ total_bukti_gambar = st.session_state["modul_02"]["bukti_gambar_count"]
 # -----------------------------------------------------------------------------
 # HALAMAN 1: BERANDA (DASHBOARD MODUL & RINGKASAN)
 # -----------------------------------------------------------------------------
-if st.session_state["nav_page"] == "Beranda":
+if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
+    if st.session_state["nav_page"] == "Daftar Modul":
+        st.subheader("📚 Daftar 9 Modul Praktikum")
+        st.caption("Klik kartu untuk masuk ke halaman khusus modul. Tombol Back browser dan navigasi antarmodul dapat digunakan.")
     left_col, right_col = st.columns([1.05, 2.35], gap="large")
 
     with left_col:
@@ -689,6 +763,9 @@ if st.session_state["nav_page"] == "Beranda":
             6. <b>Simulasi Sebelum–Sesudah</b> pengendalian angkat berdasarkan NIOSH
         </div>
         """, unsafe_allow_html=True)
+        if st.session_state["nav_page"] == "Beranda":
+            if st.button("Lihat daftar semua modul →", key="home_all_modules", use_container_width=True):
+                go_to_page("daftar-modul")
 
     with right_col:
         st.markdown("<h4 style='margin:0 0 10px 0; color:#0f172a;'>Modul Akademik</h4>", unsafe_allow_html=True)
@@ -699,15 +776,15 @@ if st.session_state["nav_page"] == "Beranda":
         ).strip().lower()
 
         modules_meta = [
-            ("Modul 01", "Fisiologi Kerja", "Dua operator, kondisi normal dan setelah aktivitas, nadi kerja, konsumsi energi serta perhitungan %CVL.", "Modul 01 - Fisiologi Kerja"),
-            ("Modul 02", "Postur Kerja & AI Pose", "Evaluasi postur kerja terpadu (RULA, OWAS, REBA) dilengkapi deteksi sudut otomatis dari foto.", "Modul 02 - Postur Kerja"),
-            ("Modul 03", "Pengukuran Waktu Kerja", "Tujuh elemen kerja, rating Westinghouse, allowance, uji keseragaman, kecukupan & waktu baku.", "Modul 03 - Pengukuran Waktu Kerja"),
-            ("Modul 04", "Antropometri (32 Dimensi)", "32 dimensi tubuh, uji normalitas Shapiro-Wilk, kurva Gaussian interaktif, dan Database Populasi.", "Modul 04 - Antropometri 32 Dimensi"),
-            ("Modul 05", "Antropometri Lanjutan & CAD 2D", "Uji keseragaman, kecukupan data, serta blueprint visual 2D kursi & meja stasiun kerja.", "Modul 05 - Antropometri Lanjutan"),
-            ("Modul 06", "Temperatur Ruang", "Perbandingan kondisi dingin/panas beserta uji-t dan indikator awal; NAB iklim kerja memerlukan ISBB.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
-            ("Modul 07", "Kebisingan (dBA)", "Perbandingan kondisi normal/bising (dBA) beserta evaluasi batas aman 85 dBA.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
-            ("Modul 08", "Pencahayaan (Lux)", "Perbandingan kondisi normal/gelap (Lux) beserta evaluasi standar pencahayaan SNI.", "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)"),
-            ("Modul 09", "MMH (NIOSH, Snook & L5/S1)", "RWL & Lifting Index NIOSH, simulasi Snook, serta estimasi biomekanika L5/S1.", "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)"),
+            ("Modul 01", "Fisiologi Kerja", "Dua operator, kondisi normal dan setelah aktivitas, nadi kerja, konsumsi energi serta perhitungan %CVL.", "modul-01"),
+            ("Modul 02", "Postur Kerja & AI Pose", "Evaluasi postur kerja terpadu (RULA, OWAS, REBA) dilengkapi deteksi sudut otomatis dari foto.", "modul-02"),
+            ("Modul 03", "Pengukuran Waktu Kerja", "Tujuh elemen kerja, rating Westinghouse, allowance, uji keseragaman, kecukupan & waktu baku.", "modul-03"),
+            ("Modul 04", "Antropometri (32 Dimensi)", "32 dimensi tubuh, uji normalitas Shapiro-Wilk, kurva Gaussian interaktif, dan Database Populasi.", "modul-04"),
+            ("Modul 05", "Antropometri Lanjutan & CAD 2D", "Uji keseragaman, kecukupan data, serta blueprint visual 2D kursi & meja stasiun kerja.", "modul-05"),
+            ("Modul 06", "Temperatur Ruang", "Perbandingan kondisi dingin/panas beserta uji-t dan indikator awal; NAB iklim kerja memerlukan ISBB.", "modul-06"),
+            ("Modul 07", "Kebisingan (dBA)", "Perbandingan kondisi normal/bising (dBA) beserta evaluasi pajanan suara.", "modul-07"),
+            ("Modul 08", "Pencahayaan (Lux)", "Perbandingan kondisi normal/gelap (Lux) beserta evaluasi standar pencahayaan.", "modul-08"),
+            ("Modul 09", "MMH (NIOSH, Snook & L5/S1)", "RWL & Lifting Index NIOSH, simulasi Snook, serta estimasi biomekanika L5/S1.", "modul-09"),
         ]
 
         filtered_mods = [
@@ -716,7 +793,7 @@ if st.session_state["nav_page"] == "Beranda":
         ]
 
         mod_cols = st.columns(2, gap="medium")
-        for idx, (m_code, m_title, m_desc, target_key) in enumerate(filtered_mods):
+        for idx, (m_code, m_title, m_desc, page_slug) in enumerate(filtered_mods):
             with mod_cols[idx % 2]:
                 st.markdown(f"""
                 <div class="module-card">
@@ -728,10 +805,7 @@ if st.session_state["nav_page"] == "Beranda":
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button(f"Buka lembar kerja {m_code}", key=f"open_{m_code}", use_container_width=True):
-                    st.session_state["selected_modul"] = target_key
-                    st.session_state["_ui_selected_modul"] = target_key
-                    st.session_state["nav_page"] = "Modul Praktikum"
-                    st.rerun()
+                    go_to_page(page_slug)
 
 # -----------------------------------------------------------------------------
 # HALAMAN 2: IDENTITAS KELOMPOK & OPERATOR
@@ -775,21 +849,8 @@ elif st.session_state["nav_page"] == "Identitas":
 # HALAMAN 3: MODUL PRAKTIKUM (01 s/d 09)
 # -----------------------------------------------------------------------------
 elif st.session_state["nav_page"] == "Modul Praktikum":
-    modul_list = [
-        "Modul 01 - Fisiologi Kerja",
-        "Modul 02 - Postur Kerja",
-        "Modul 03 - Pengukuran Waktu Kerja",
-        "Modul 04 - Antropometri 32 Dimensi",
-        "Modul 05 - Antropometri Lanjutan",
-        "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)",
-        "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)",
-    ]
-    if st.session_state.get("_ui_selected_modul") not in modul_list:
-        st.session_state["_ui_selected_modul"] = (
-            st.session_state["selected_modul"] if st.session_state["selected_modul"] in modul_list else modul_list[0]
-        )
-    chosen = st.selectbox("Pilih Lembar Kerja Modul Praktikum:", modul_list, key="_ui_selected_modul")
-    st.session_state["selected_modul"] = chosen
+    chosen = MODULE_PAGE_TITLES[st.session_state["_active_page_slug"]]
+    render_module_navigation("atas")
     prepare_editor_scope(st.session_state, f"Modul Praktikum:{chosen}")
     st.divider()
 
@@ -1061,57 +1122,69 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             "Analisis & Pembahasan Modul 05:", value=st.session_state["analisis_modul"]["Modul 05"]
         )
 
-    # --- MODUL 06, 07, 08: LINGKUNGAN KERJA ---
-    elif chosen == "Modul 06 - Lingkungan (Temperatur, Kebisingan, Pencahayaan)":
-        st.subheader("🌡️🔊💡 Modul 06, 07, & 08: Lingkungan Fisik Kerja", anchor="modul-06-07-08-lingkungan")
-        m6, m7, m8 = st.session_state["modul_06"], st.session_state["modul_07"], st.session_state["modul_08"]
+    # --- MODUL 06, 07, 08: TIAP LINGKUNGAN MEMILIKI HALAMAN SENDIRI ---
+    elif chosen in ("Modul 06 - Temperatur", "Modul 07 - Kebisingan", "Modul 08 - Pencahayaan"):
+        nomor = chosen.split()[1]
+        konfigurasi = {
+            "06": ("🌡️ Modul 06: Temperatur (°C)", "modul_06", [
+                ("dingin_suhu", "Suhu kondisi dingin (°C)", 10.0, 45.0),
+                ("panas_suhu", "Suhu kondisi panas (°C)", 10.0, 50.0),
+            ]),
+            "07": ("🔊 Modul 07: Kebisingan (dBA)", "modul_07", [
+                ("normal_db", "Kebisingan normal (dBA)", 30.0, 120.0),
+                ("bising_db", "Kebisingan saat bising (dBA)", 30.0, 120.0),
+            ]),
+            "08": ("💡 Modul 08: Pencahayaan (lux)", "modul_08", [
+                ("normal_lux", "Cahaya normal (lux)", 1.0, 2000.0),
+                ("gelap_lux", "Cahaya saat redup (lux)", 1.0, 2000.0),
+            ]),
+        }
+        judul, state_key, input_specs = konfigurasi[nomor]
+        data_lingkungan = st.session_state[state_key]
+        st.subheader(judul, anchor=f"modul-{nomor}-lingkungan")
+        st.caption("Tiga percobaan per kondisi. Input dan analisis hanya untuk modul yang sedang dibuka.")
+        cols = st.columns(2, gap="large")
+        for col, (field, label, minimum, maksimum) in zip(cols, input_specs):
+            with col:
+                st.markdown(f"#### {label}")
+                for i in range(3):
+                    data_lingkungan[field][i] = st.number_input(
+                        f"{label} — Percobaan {i + 1}", minimum, maksimum,
+                        float(data_lingkungan[field][i]), key=f"ling_{nomor}_{field}_{i}",
+                    )
 
-        t_col1, t_col2, t_col3 = st.columns(3, gap="medium")
-        with t_col1:
-            st.markdown("#### 🌡️ Modul 06: Temperatur (°C)")
-            for i in range(3):
-                m6["dingin_suhu"][i] = st.number_input(f"Suhu Kondisi Dingin - Percobaan {i+1} (°C)", 10.0, 45.0, float(m6["dingin_suhu"][i]), key=f"t_d_{i}")
-            for i in range(3):
-                m6["panas_suhu"][i] = st.number_input(f"Suhu Kondisi Panas - Percobaan {i+1} (°C)", 10.0, 50.0, float(m6["panas_suhu"][i]), key=f"t_p_{i}")
-
-        with t_col2:
-            st.markdown("#### 🔊 Modul 07: Kebisingan (dBA)")
-            for i in range(3):
-                m7["normal_db"][i] = st.number_input(f"Kebisingan Normal - Percobaan {i+1} (dBA)", 30.0, 120.0, float(m7["normal_db"][i]), key=f"b_n_{i}")
-            for i in range(3):
-                m7["bising_db"][i] = st.number_input(f"Kebisingan Bising - Percobaan {i+1} (dBA)", 30.0, 120.0, float(m7["bising_db"][i]), key=f"b_b_{i}")
-
-        with t_col3:
-            st.markdown("#### 💡 Modul 08: Pencahayaan (Lux)")
-            for i in range(3):
-                m8["normal_lux"][i] = st.number_input(f"Cahaya Normal - Percobaan {i+1} (Lux)", 1.0, 2000.0, float(m8["normal_lux"][i]), key=f"l_n_{i}")
-            for i in range(3):
-                m8["gelap_lux"][i] = st.number_input(f"Cahaya Gelap - Percobaan {i+1} (Lux)", 1.0, 2000.0, float(m8["gelap_lux"][i]), key=f"l_g_{i}")
-
-        calc_all = compile_all_calculations()
-        df_env = pd.DataFrame(calc_all["env_rows"], columns=[
+        hasil = compile_all_calculations()["env_rows"][int(nomor) - 6]
+        df_env = pd.DataFrame([hasil], columns=[
             "Modul", "Parameter Uji", "Mean Kondisi 1", "Mean Kondisi 2",
-            "Selisih", "Acuan Perbandingan Praktikum", "p-value (Uji-t)", "Kesimpulan Statistik", "Analisis & Rekomendasi"
+            "Selisih", "Acuan Perbandingan Praktikum", "p-value (Uji-t)",
+            "Kesimpulan Statistik", "Analisis & Rekomendasi",
         ])
-        st.markdown("#### 📊 Hasil Evaluasi Lingkungan Fisik & Uji Hipotesis Komparatif")
+        st.markdown("#### 📊 Hasil Perhitungan dan Perbandingan Kondisi")
         st.dataframe(df_env, use_container_width=True, hide_index=True)
-        st.caption("Angka suhu 28°C hanya pembanding latihan, bukan NAB suhu udara berdasarkan Permenaker. "
-                   "Penilaian iklim kerja memerlukan ISBB, beban kerja, dan pola kerja-istirahat; "
-                   "kebisingan NAB 85 dBA mengacu pajanan ekuivalen 8 jam, bukan rerata tiga bacaan sesaat.")
-        st.caption("Rujukan: [Permenaker No. 5 Tahun 2018 (JDIH Kemnaker)](https://jdih.kemnaker.go.id/peraturan/detail/1546/peraturan-menteri-nomor-5-).")
-
-        mean_panas = np.mean(m6["panas_suhu"])
-        mean_bising = np.mean(m7["bising_db"])
-        mean_gelap = np.mean(m8["gelap_lux"])
-        alerts = []
-        if mean_panas > m6["nab_suhu"]:
-            alerts.append(f"Suhu rata-rata (**{mean_panas:.1f}°C**) lebih tinggi daripada acuan latihan (**{m6['nab_suhu']}°C**); status NAB ISBB belum dapat ditentukan")
-        if mean_bising > m7["nab_db"]:
-            alerts.append(f"Bacaan kebisingan rata-rata (**{mean_bising:.1f} dBA**) melebihi nilai pembanding (**{m7['nab_db']} dBA**); ukur pajanan 8 jam sebelum menyimpulkan kepatuhan NAB")
-        if mean_gelap < m8["standar_lux"]:
-            alerts.append(f"Pencahayaan redup rata-rata (**{mean_gelap:.1f} lux**) di bawah acuan tugas (**{m8['standar_lux']} lux**); sesuaikan standar dengan jenis pekerjaan")
-        if alerts:
-            st.warning("⚠️ **Indikator untuk pemeriksaan K3 lebih lanjut:**\n- " + "\n- ".join(alerts))
+        if nomor == "06":
+            st.caption("Suhu 28°C hanyalah pembanding latihan; penilaian iklim kerja resmi memerlukan ISBB, beban kerja, serta waktu kerja-istirahat.")
+            mean_value = float(np.mean(data_lingkungan["panas_suhu"]))
+            batas = data_lingkungan["nab_suhu"]
+            if mean_value > batas:
+                st.warning(f"Suhu rata-rata {mean_value:.1f}°C melampaui acuan latihan {batas}°C; belum berarti melampaui NAB ISBB.")
+        elif nomor == "07":
+            st.caption("Acuan 85 dBA terkait pajanan ekuivalen 8 jam, bukan hanya tiga pembacaan sesaat.")
+            mean_value = float(np.mean(data_lingkungan["bising_db"]))
+            batas = data_lingkungan["nab_db"]
+            if mean_value > batas:
+                st.warning(f"Rerata bacaan {mean_value:.1f} dBA di atas acuan {batas} dBA; ukur pajanan ekuivalen sebelum menyimpulkan kepatuhan.")
+        else:
+            st.caption("Standar pencahayaan perlu disesuaikan dengan jenis pekerjaan dan area pengukuran.")
+            mean_value = float(np.mean(data_lingkungan["gelap_lux"]))
+            batas = data_lingkungan["standar_lux"]
+            if mean_value < batas:
+                st.warning(f"Rerata pencahayaan redup {mean_value:.1f} lux di bawah acuan tugas {batas} lux.")
+        st.caption("Rujukan umum: [Permenaker No. 5 Tahun 2018](https://jdih.kemnaker.go.id/peraturan/detail/1546/peraturan-menteri-nomor-5-).")
+        kunci_analisis = f"Modul {nomor}"
+        st.session_state["analisis_modul"][kunci_analisis] = st.text_area(
+            f"Analisis & Pembahasan Modul {nomor}:",
+            value=st.session_state["analisis_modul"][kunci_analisis],
+        )
 
     # --- MODUL 09: MANUAL MATERIAL HANDLING ---
     elif chosen == "Modul 09 - Manual Material Handling (NIOSH, Snook & L5/S1)":
@@ -1291,6 +1364,9 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         st.session_state["analisis_modul"]["Modul 09"] = st.text_area(
             "Analisis & Pembahasan Modul 09:", value=st.session_state["analisis_modul"]["Modul 09"]
         )
+
+    st.divider()
+    render_module_navigation("bawah")
 
 # -----------------------------------------------------------------------------
 # HALAMAN 4: KALKULATOR POSTUR KERJA LENGKAP

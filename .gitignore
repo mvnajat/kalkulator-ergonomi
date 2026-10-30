@@ -1,0 +1,10 @@
+# Artefak lokal sementara dari aplikasi dan pengujian.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+database_antropometri_upb.sqlite
+
+# Konfigurasi privat tidak boleh ikut terpublikasi.
+.streamlit/secrets.toml
+.env
+.env.local
