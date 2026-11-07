@@ -12,6 +12,13 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Beranda Minimal — November 2026
+
+- Mempertahankan hero emerald dan kartu progres dinamis, dengan informasi yang lebih ringkas.
+- Menghilangkan angka progres duplikat, daftar alur di dalam kartu progres, serta pintasan pendukung berulang dari beranda.
+- Beranda kini memiliki dua aksi utama dan hanya tiga kartu modul awal (01–03). Kesembilan modul, pencarian, dan statusnya tetap lengkap di **Daftar Modul**.
+- Fitur proyek, panduan, impor, dan dashboard tetap dapat diakses melalui navigasi utama atau menu **Lainnya**. Alur perhitungan dan penyimpanan tidak berubah.
+
 ### ErgoLab Visual Refresh — November 2026
 
 - Beranda kini memakai hero emerald dua kolom dengan kartu progres dinamis berdasarkan jumlah modul yang sudah diperiksa, bukan angka capaian palsu.
