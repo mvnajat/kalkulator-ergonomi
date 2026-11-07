@@ -12,6 +12,12 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Menu Akun dan Alat Pendukung — November 2026
+
+- Sidebar kiri yang menyempitkan area kerja telah dihilangkan dari antarmuka utama.
+- Akun Google, masuk/keluar, dan empat menu pendukung dipindahkan ke popover **Lainnya / akun pengguna** di kanan navigasi atas. Fitur dan perilaku penyimpanan tidak berubah.
+- Di layar kecil, tombol akun tetap berada di sisi kanan bilah navigasi yang dapat digeser.
+
 ### Penyegaran UI — November 2026
 
 - Beranda lebih ringkas: hero yang fokus pada satu tujuan, tiga tombol aksi jelas, ringkasan proyek, dan panduan awal yang dapat dibuka bila diperlukan.
