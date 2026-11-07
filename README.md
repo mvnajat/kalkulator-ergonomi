@@ -12,6 +12,13 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Standar Workspace & Modul 01 — November 2026
+
+- Semua modul mendapat pengantar empat langkah yang konsisten pada tab Data, Hasil, Analisis, dan Panduan & Laporan.
+- Modul 01 sekarang mengelompokkan input Operator A dan B ke kartu terpisah, menandai setiap aktivitas, dan mengelompokkan pengamatan pemulihan P0–P5 per operator.
+- Hasil Modul 01 dibagi menjadi bagian beban kerja/energi serta pemulihan nadi, dengan tabel, grafik, rumus, dan validasi yang tetap tersedia.
+- Layout menyesuaikan layar kecil, termasuk tumpukan kartu operator. Seluruh nilai awal, widget angka, perhitungan, autentikasi, serta ekspor tidak diubah.
+
 ### Beranda Minimal — November 2026
 
 - Mempertahankan hero emerald dan kartu progres dinamis, dengan informasi yang lebih ringkas.

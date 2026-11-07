@@ -860,7 +860,27 @@ def module_workspace_tabs(slug: str):
             "Tingkat tampilan", modes, index=modes.index(selected) if selected in modes else 0,
             key=f"ux_mode_{number}", help="Pemula menampilkan ringkasan; Lanjutan membuka detail perhitungan.",
         )
-    return st.tabs(["1 · Data", "2 · Hasil", "3 · Analisis", "4 · Panduan & Laporan"])
+    tabs = st.tabs(["1 · Data", "2 · Hasil", "3 · Analisis", "4 · Panduan & Laporan"])
+    steps = (
+        ("Isi data pengamatan", "Gunakan data pengukuran asli. Angka bawaan hanya contoh untuk latihan."),
+        ("Periksa hasil perhitungan", "Baca tabel, grafik, dan pesan validasi sebelum menarik kesimpulan."),
+        ("Tulis analisis praktikum", "Hubungkan hasil dengan kondisi kerja, keterbatasan data, dan rekomendasi."),
+        ("Tinjau dan selesaikan", "Periksa panduan, tandai modul selesai, lalu buka halaman laporan."),
+    )
+    theme = MODULE_VISUALS[slug][0]
+    for idx, (tab, (title, description)) in enumerate(zip(tabs, steps), start=1):
+        with tab:
+            st.markdown(f"""
+            <div class="workspace-step-intro theme-{theme}">
+              <span class="workspace-step-count">{idx:02d}</span>
+              <div>
+                <div class="workspace-step-label">LANGKAH {idx:02d} / 04</div>
+                <div class="workspace-step-name">{title}</div>
+                <p>{description}</p>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+    return tabs
 
 
 def reset_restored_widgets() -> None:
@@ -1329,30 +1349,50 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
         with step_tabs[0]:
             col_op1, col_op2 = st.columns(2, gap="large")
             with col_op1:
-                st.markdown(f"#### 👤 {id_info['op1_nama']} ({id_info['op1_usia']} thn, {id_info['op1_jk']})")
-                m1["op1_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 1)", value=m1["op1_akt1_nama"])
-                a1, a2 = st.columns(2)
-                m1["op1_akt1_dni"] = a1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op1_akt1_dni"]), key="op1_dni1")
-                m1["op1_akt1_dnk"] = a2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op1_akt1_dnk"]), key="op1_dnk1")
+                with st.container(border=True):
+                    st.markdown(f"""
+                    <div class="m01-operator-head operator-a">
+                      <span class="m01-operator-avatar">A</span>
+                      <div><strong>{escape(str(id_info['op1_nama']))}</strong>
+                        <small>{escape(str(id_info['op1_usia']))} tahun · {escape(str(id_info['op1_jk']))}</small>
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.markdown('<div class="m01-activity-label">AKTIVITAS 01</div>', unsafe_allow_html=True)
+                    m1["op1_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 1)", value=m1["op1_akt1_nama"])
+                    a1, a2 = st.columns(2)
+                    m1["op1_akt1_dni"] = a1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op1_akt1_dni"]), key="op1_dni1")
+                    m1["op1_akt1_dnk"] = a2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op1_akt1_dnk"]), key="op1_dnk1")
 
-                m1["op1_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 1)", value=m1["op1_akt2_nama"])
-                b1, b2 = st.columns(2)
-                m1["op1_akt2_dni"] = b1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op1_akt2_dni"]), key="op1_dni2")
-                m1["op1_akt2_dnk"] = b2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op1_akt2_dnk"]), key="op1_dnk2")
+                    st.markdown('<div class="m01-activity-label">AKTIVITAS 02</div>', unsafe_allow_html=True)
+                    m1["op1_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 1)", value=m1["op1_akt2_nama"])
+                    b1, b2 = st.columns(2)
+                    m1["op1_akt2_dni"] = b1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op1_akt2_dni"]), key="op1_dni2")
+                    m1["op1_akt2_dnk"] = b2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op1_akt2_dnk"]), key="op1_dnk2")
 
             with col_op2:
-                st.markdown(f"#### 👤 {id_info['op2_nama']} ({id_info['op2_usia']} thn, {id_info['op2_jk']})")
-                m1["op2_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 2)", value=m1["op2_akt1_nama"])
-                c1, c2 = st.columns(2)
-                m1["op2_akt1_dni"] = c1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op2_akt1_dni"]), key="op2_dni1")
-                m1["op2_akt1_dnk"] = c2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op2_akt1_dnk"]), key="op2_dnk1")
+                with st.container(border=True):
+                    st.markdown(f"""
+                    <div class="m01-operator-head operator-b">
+                      <span class="m01-operator-avatar">B</span>
+                      <div><strong>{escape(str(id_info['op2_nama']))}</strong>
+                        <small>{escape(str(id_info['op2_usia']))} tahun · {escape(str(id_info['op2_jk']))}</small>
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.markdown('<div class="m01-activity-label">AKTIVITAS 01</div>', unsafe_allow_html=True)
+                    m1["op2_akt1_nama"] = st.text_input("Nama Aktivitas 1 (Op 2)", value=m1["op2_akt1_nama"])
+                    c1, c2 = st.columns(2)
+                    m1["op2_akt1_dni"] = c1.number_input("DN Istirahat Akt 1 (bpm)", 40.0, 150.0, float(m1["op2_akt1_dni"]), key="op2_dni1")
+                    m1["op2_akt1_dnk"] = c2.number_input("DN Kerja Akt 1 (bpm)", 50.0, 210.0, float(m1["op2_akt1_dnk"]), key="op2_dnk1")
 
-                m1["op2_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 2)", value=m1["op2_akt2_nama"])
-                d1, d2 = st.columns(2)
-                m1["op2_akt2_dni"] = d1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op2_akt2_dni"]), key="op2_dni2")
-                m1["op2_akt2_dnk"] = d2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op2_akt2_dnk"]), key="op2_dnk2")
+                    st.markdown('<div class="m01-activity-label">AKTIVITAS 02</div>', unsafe_allow_html=True)
+                    m1["op2_akt2_nama"] = st.text_input("Nama Aktivitas 2 (Op 2)", value=m1["op2_akt2_nama"])
+                    d1, d2 = st.columns(2)
+                    m1["op2_akt2_dni"] = d1.number_input("DN Istirahat Akt 2 (bpm)", 40.0, 150.0, float(m1["op2_akt2_dni"]), key="op2_dni2")
+                    m1["op2_akt2_dnk"] = d2.number_input("DN Kerja Akt 2 (bpm)", 50.0, 210.0, float(m1["op2_akt2_dnk"]), key="op2_dnk2")
 
-            st.markdown("#### 💓 Pemulihan Denyut Nadi (P0–P5), ECPT & ECPM")
+            st.markdown('<div class="m01-recovery-heading"><span>02</span><strong>Pemulihan denyut nadi (P0–P5)</strong></div>', unsafe_allow_html=True)
             st.caption("Masukkan nadi terukur dalam bpm. P0 = sebelum kerja; P1–P5 = pengamatan saat/setelah aktivitas sesuai protokol praktikum. "
                        "Contoh isian awal hanya ilustrasi dan harus diganti dengan hasil pengamatan.")
             m1.setdefault("pemulihan", {})
@@ -1360,16 +1400,17 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             recovery_cols = st.columns(2, gap="large")
             for idx, op in enumerate(("op1", "op2")):
                 with recovery_cols[idx]:
-                    st.markdown(f"**{id_info[op + '_nama']}**")
-                    points = m1["pemulihan"].setdefault(op, {f"P{i}": float(p) for i, p in enumerate(pulse_defaults[op])})
-                    for group in (("P0", "P1", "P2"), ("P3", "P4", "P5")):
-                        cols = st.columns(3)
-                        for col, label in zip(cols, group):
-                            points[label] = col.number_input(
-                                f"{label} (bpm) · {op.upper()}", min_value=30.0, max_value=250.0,
-                                value=float(points.get(label, pulse_defaults[op][int(label[1])])), step=1.0,
-                                key=f"pulse_{op}_{label}",
-                            )
+                    with st.container(border=True):
+                        st.markdown(f'<div class="m01-recovery-operator">Operator {"A" if idx == 0 else "B"} <span>{escape(str(id_info[op + "_nama"]))}</span></div>', unsafe_allow_html=True)
+                        points = m1["pemulihan"].setdefault(op, {f"P{i}": float(p) for i, p in enumerate(pulse_defaults[op])})
+                        for group in (("P0", "P1", "P2"), ("P3", "P4", "P5")):
+                            cols = st.columns(3)
+                            for col, label in zip(cols, group):
+                                points[label] = col.number_input(
+                                    f"{label} (bpm) · {op.upper()}", min_value=30.0, max_value=250.0,
+                                    value=float(points.get(label, pulse_defaults[op][int(label[1])])), step=1.0,
+                                    key=f"pulse_{op}_{label}",
+                                )
 
         with step_tabs[1]:
             calc_all = compile_all_calculations()
@@ -1377,21 +1418,25 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
                 "Operator", "Aktivitas", "Usia (th)", "DN Istirahat", "DN Kerja",
                 "DN Maks", "%CVL (%)", "Konsumsi Energi Bersih (kkal/mnt)", "Kategori Beban", "Rekomendasi"
             ])
-            st.markdown("#### 📊 Hasil Perhitungan Fisiologi Kerja (%CVL & Konsumsi Energi)")
-            st.dataframe(df_m1, use_container_width=True, hide_index=True)
+            with st.container(border=True):
+                st.markdown('<div class="m01-result-heading">01 · Beban kerja &amp; energi</div>', unsafe_allow_html=True)
+                st.caption("Hasil per aktivitas berdasarkan denyut nadi istirahat dan kerja.")
+                st.dataframe(df_m1, use_container_width=True, hide_index=True)
 
             for message in calc_all.get("m1_errors", []):
                 st.error(f"Periksa data: {message}")
 
-            calc_all = compile_all_calculations()
             recovery_rows = calc_all.get("m1_recovery_rows", [])
             if recovery_rows:
-                st.dataframe(pd.DataFrame(recovery_rows, columns=[
-                    "Operator", "P0", "P1", "P2", "P3", "P4", "P5", "ECPT (bpm)",
-                    "ECPM (bpm)", "Pemulihan P1→P5 (%)", "Catatan",
-                ]), use_container_width=True, hide_index=True)
-                chart = pd.DataFrame({r[0]: r[1:7] for r in recovery_rows}, index=[f"P{i}" for i in range(6)])
-                st.line_chart(chart, x_label="Titik pengamatan", y_label="Denyut nadi (bpm)")
+                with st.container(border=True):
+                    st.markdown('<div class="m01-result-heading">02 · Pemulihan denyut nadi</div>', unsafe_allow_html=True)
+                    st.caption("Bandingkan titik P0–P5 dan nilai ECPT/ECPM antaroperator.")
+                    st.dataframe(pd.DataFrame(recovery_rows, columns=[
+                        "Operator", "P0", "P1", "P2", "P3", "P4", "P5", "ECPT (bpm)",
+                        "ECPM (bpm)", "Pemulihan P1→P5 (%)", "Catatan",
+                    ]), use_container_width=True, hide_index=True)
+                    chart = pd.DataFrame({r[0]: r[1:7] for r in recovery_rows}, index=[f"P{i}" for i in range(6)])
+                    st.line_chart(chart, x_label="Titik pengamatan", y_label="Denyut nadi (bpm)")
             with st.expander("🔎 Rumus dan interpretasi ECPT/ECPM", expanded=False):
                 st.latex(r"ECPT = \frac{P3+P4+P5}{3}-P0")
                 st.latex(r"ECPM = (P1+P2-P3)-\frac{P3+P4+P5}{3}")
@@ -1406,9 +1451,13 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
                 st.success("✅ **Validasi Fisiologi Otomatis:** Seluruh aktivitas memiliki beban kardiovaskular %CVL ≤ 30% (Aman tanpa kelelahan berarti).")
 
         with step_tabs[2]:
-            st.session_state["analisis_modul"]["Modul 01"] = st.text_area(
-                "Analisis & Pembahasan Modul 01:", value=st.session_state["analisis_modul"]["Modul 01"]
-            )
+            with st.container(border=True):
+                st.caption("Jelaskan perbandingan operator, pola pemulihan, serta rekomendasi sesuai data pengamatan.")
+                st.session_state["analisis_modul"]["Modul 01"] = st.text_area(
+                    "Analisis & Pembahasan Modul 01:",
+                    value=st.session_state["analisis_modul"]["Modul 01"],
+                    height=200,
+                )
 
     # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
     elif chosen == "Modul 02 - Postur Kerja":
