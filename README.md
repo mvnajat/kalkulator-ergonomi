@@ -12,6 +12,15 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Dashboard Interaktif, Riwayat Google & PDF Ringkasan — November 2026
+
+- **Dashboard:** filter modul berdasarkan status selesai/belum selesai dan grafik interaktif sesuai satuan masing-masing modul, termasuk %CVL, RULA, waktu baku, persentil tubuh, ukuran rancangan, perbandingan lingkungan, dan Lifting Index. Grafik hanya menampilkan hasil perhitungan yang valid; rumus tetap sama.
+- **Riwayat cloud pribadi:** pengguna yang login Google dan memiliki database PostgreSQL aktif dapat menyimpan *snapshot* seluruh proyek dengan label modul pilihan. Riwayat dapat dilihat dari Dashboard atau Proyek Saya. Setiap snapshot tetap memuat seluruh proyek agar dapat dipulihkan utuh, memiliki ID dan tanggal, tidak menimpa riwayat lama, dan hanya dapat ditampilkan/dibuka menggunakan identitas `sub` akun yang sama. Membuka snapshot memerlukan konfirmasi karena mengganti data sesi aktif.
+- **PDF dashboard:** tombol ekspor ringkasan status 9 modul dan indikator terpilih, terpisah dari laporan lengkap dan PDF per modul yang sudah tersedia. PDF/JSON tetap dapat diunduh tanpa login.
+- **Pengalaman HP:** area nav dapat digeser dengan target sentuh lebih besar; tab, grafik, metrik, dan tabel lebih adaptif untuk layar kecil.
+- **Privasi:** aplikasi tidak mengirim data otomatis ke riwayat; simpan riwayat harus ditekan secara sadar. Tombol autosave proyek yang sudah ada tetap *opt-in* dan terpisah. Data contoh bukan hasil pengukuran nyata.
+
+
 ### Konsistensi UI/UX Modul 03–09 — November 2026
 
 - **Modul 03:** Input waktu siklus, rating Westinghouse/allowance, dan penyesuaian per elemen kini berada di tiga kartu terpisah; validasi dan kapasitas produk dibedakan dari tabel hasil. Perbandingan empat metode tetap tersedia.

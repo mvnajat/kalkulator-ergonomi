@@ -25,7 +25,10 @@ from utils.exporter import export_session_to_json, export_session_to_excel, rest
 from utils.workspace import (
     create_project_file, read_project_file, normalize_project_name,
     cloud_save, cloud_list, cloud_load, google_auth_is_ready, oidc_subject,
+    cloud_history_save, cloud_history_list, cloud_history_load,
 )
+from utils.dashboard import CHART_MODULES, build_chart_view
+from utils.dashboard_report import export_dashboard_pdf
 from utils.importer import make_excel_template, read_excel_observations
 from utils.education import LESSONS, worked_example
 from utils.module_report import export_module_pdf
@@ -949,8 +952,8 @@ def render_login_widget() -> None:
 
 
 def render_dashboard() -> None:
-    st.subheader("📊 Dashboard Kemajuan Praktikum")
-    st.caption("Status selesai ditandai secara manual setelah hasil diperiksa; data contoh bukan bukti modul sudah selesai.")
+    st.subheader("📊 Dashboard Praktikum")
+    st.caption("Pantau progres dan jelajahi grafik hasil setiap modul. Angka awal adalah contoh latihan, bukan hasil observasi.")
     done = st.session_state["module_done"]
     count = sum(bool(done.get(slug)) for slug in MODULE_ORDER)
     a, b, c = st.columns(3)
@@ -959,25 +962,138 @@ def render_dashboard() -> None:
     c.metric("Kemajuan", f"{count/9:.0%}")
     st.progress(count/9)
     st.caption(f"Proyek aktif: {st.session_state['project_name']}")
-    cols = st.columns(3)
-    for idx, slug in enumerate(MODULE_ORDER):
-        with cols[idx % 3]:
-            with st.container(border=True):
-                st.markdown(f"**{MODULE_PAGE_TITLES[slug]}**")
-                st.write("✅ Sudah diperiksa" if done.get(slug) else "⏳ Belum ditandai")
-                if st.button("Buka modul →", key=f"dash_{slug}", use_container_width=True):
-                    go_to_page(slug)
-    st.divider()
-    st.markdown("#### Ringkasan angka latihan saat ini")
-    res = compile_all_calculations()
-    m3 = res.get("m3_rows", [])
-    s = res.get("m9_summary", {})
-    x, y, z = st.columns(3)
-    x.metric("Pengamatan postur", len(st.session_state["modul_02"].get("records", [])))
-    y.metric("Total waktu baku", f"{sum(r[12] for r in m3):.2f} detik")
-    z.metric("NIOSH Lifting Index", str(s.get("li", "-")))
-    st.info("Ringkasan tersebut berasal dari data yang saat ini ada di sesi, termasuk data contoh. "
-            "Periksa hasil masing-masing modul sebelum membuat kesimpulan akademik.")
+    overview, visual, history = st.tabs(["Progres modul", "Grafik hasil", "Riwayat & PDF"])
+    with overview:
+        status = st.radio("Filter status modul", ["Semua", "Sudah diperiksa", "Belum diperiksa"],
+                          horizontal=True, key="_dash_status_filter")
+        slugs = [slug for slug in MODULE_ORDER if status == "Semua" or
+                 (bool(done.get(slug)) == (status == "Sudah diperiksa"))]
+        st.caption(f"Menampilkan {len(slugs)} dari 9 modul")
+        if not slugs:
+            st.info("Belum ada modul dalam kategori ini.")
+        cols = st.columns(3)
+        for idx, slug in enumerate(slugs):
+            with cols[idx % 3]:
+                with st.container(border=True):
+                    st.markdown(f"**{MODULE_PAGE_TITLES[slug]}**")
+                    st.caption("✅ Sudah diperiksa" if done.get(slug) else "⏳ Belum ditandai")
+                    if st.button("Buka modul →", key=f"dash_{slug}", use_container_width=True):
+                        go_to_page(slug)
+    with visual:
+        st.markdown("#### Perbandingan hasil per modul")
+        st.caption("Pilih modul untuk menampilkan grafik. Grafik tidak menggabungkan parameter dengan satuan berbeda.")
+        selected_slug = st.selectbox("Pilih data grafik", MODULE_ORDER,
+                                     format_func=lambda slug: CHART_MODULES[slug], key="_dash_graph_module")
+        results = compile_all_calculations()
+        dimension = ""
+        if selected_slug == "modul-04":
+            available = results.get("m4_rows", [])
+            if available:
+                dimension = st.selectbox("Dimensi yang ditampilkan", [str(r[0]) for r in available],
+                                         format_func=lambda code: next(str(r[1]) for r in available if str(r[0]) == code),
+                                         key="_dash_graph_dim")
+        chart = build_chart_view(selected_slug, results, dimension)
+        with st.container(border=True):
+            st.markdown(f"**{chart.title}**")
+            if chart.data.empty:
+                st.info("Belum ada hasil numerik valid untuk ditampilkan. Periksa data modul terlebih dahulu.")
+            else:
+                st.bar_chart(chart.data, x="Pengamatan", y="Nilai", horizontal=True, use_container_width=True)
+                st.dataframe(chart.data.rename(columns={"Nilai": chart.unit}),
+                             hide_index=True, use_container_width=True)
+            st.caption(chart.note)
+            if st.button("Periksa data modul ini →", key="_dash_open_graph_module"):
+                go_to_page(selected_slug)
+    with history:
+        st.markdown("#### Simpan hasil ke akun & unduh PDF")
+        st.caption("Riwayat menyimpan salinan bertanggal. Setiap simpan membuat entri baru tanpa menimpa proyek atau hasil lama.")
+        results = compile_all_calculations()
+        try:
+            overview_pdf = export_dashboard_pdf(st.session_state["project_name"],
+                                                st.session_state["identitas"], done, results)
+        except (RuntimeError, ValueError, OSError) as exc:
+            st.warning(f"PDF ringkasan belum tersedia: {exc}")
+        else:
+            st.download_button("⬇️ Unduh PDF ringkasan dashboard", data=overview_pdf,
+                               file_name="ErgoLab_Ringkasan_Dashboard.pdf", mime="application/pdf",
+                               use_container_width=True)
+        chosen = st.selectbox("Label snapshot", ["all", *MODULE_ORDER],
+                              format_func=lambda slug: "Semua modul (snapshot proyek)" if slug == "all" else MODULE_PAGE_TITLES[slug],
+                              key="_history_module_choice")
+        st.caption("Walau diberi label modul tertentu, snapshot menyimpan keseluruhan proyek agar bisa dipulihkan utuh.")
+        db_url, owner = configured_project_db(), signed_in_user_id()
+        if not db_url or not login_configured():
+            st.info("Riwayat akun membutuhkan database cloud dan Login Google yang aktif. PDF dan file proyek tetap dapat diunduh.")
+        elif not owner:
+            st.info("Masuk lewat menu **Lainnya** untuk menyimpan riwayat pribadi ke Google.")
+        if st.button("☁️ Simpan hasil ke riwayat akun", key="_history_save", disabled=not (db_url and owner),
+                     use_container_width=True):
+            try:
+                summary = ("Seluruh data & progres 9 modul" if chosen == "all" else
+                           build_chart_view(chosen, results).title)
+                cloud_history_save(db_url, owner, st.session_state["project_name"],
+                                   chosen, json.loads(export_session_to_json(st.session_state)), summary)
+                st.session_state.pop("_history_items", None)
+                st.success("Snapshot berhasil tersimpan. Hasil sebelumnya tetap tersedia di riwayat.")
+            except (ValueError, TypeError):
+                st.error("Data snapshot tidak valid. Periksa data proyek terlebih dahulu.")
+            except Exception:
+                st.error("Gagal menyimpan riwayat. Coba lagi atau unduh cadangan JSON.")
+        render_cloud_history()
+
+
+def render_cloud_history() -> None:
+    """Read history metadata on demand, never leak one user's cached list to another."""
+    st.markdown("#### Riwayat perhitungan tersimpan")
+    db_url, owner = configured_project_db(), signed_in_user_id()
+    if not db_url or not owner:
+        st.caption("Daftar riwayat tersedia setelah Login Google dan database cloud aktif.")
+        st.session_state.pop("_history_items", None)
+        st.session_state.pop("_history_owner", None)
+        return
+    if st.session_state.get("_history_owner") != owner:
+        st.session_state.pop("_history_items", None)
+        st.session_state["_history_owner"] = owner
+    if st.button("🔄 Muat / perbarui daftar riwayat", key="_history_refresh"):
+        try:
+            st.session_state["_history_items"] = cloud_history_list(db_url, owner)
+        except Exception:
+            st.warning("Riwayat belum dapat dimuat dari database.")
+    items = st.session_state.get("_history_items")
+    if items is None:
+        st.caption("Klik **Muat / perbarui** untuk membaca riwayat akun.")
+        return
+    if not items:
+        st.info("Belum ada snapshot tersimpan. Gunakan tombol simpan di atas.")
+        return
+
+    def entry_label(item):
+        stamp = item["saved_at"]
+        stamp = stamp.astimezone(ZoneInfo("Asia/Jakarta")).strftime("%d/%m/%Y %H:%M WIB") if hasattr(stamp, "astimezone") else str(stamp)
+        title = "Semua modul" if item["module_slug"] == "all" else item["module_slug"].replace("modul-", "Modul ")
+        return f"{stamp} · {title} · {item['name']}"
+
+    by_id = {item["id"]: item for item in items}
+    selected_id = st.selectbox("Pilih riwayat", list(by_id), format_func=lambda uid: entry_label(by_id[uid]),
+                               key="_history_selected_id")
+    selected = by_id[selected_id]
+    st.caption(f"Catatan: {selected['summary']}")
+    st.warning("Membuka snapshot akan mengganti data aktif yang belum disimpan. Unduh proyek saat ini sebagai cadangan jika perlu.")
+    confirmed = st.checkbox("Saya ingin mengganti data sesi aktif dengan snapshot terpilih",
+                            key="_history_confirm_restore")
+    if st.button("📂 Buka snapshot terpilih", key="_history_restore", disabled=not confirmed):
+        try:
+            backup = cloud_history_load(db_url, owner, selected_id)
+            restore_session_from_json(st.session_state, backup)
+            st.session_state["project_name"] = selected["name"]
+            st.session_state["_project_pending_name"] = selected["name"]
+            reset_restored_widgets()
+            st.session_state["_history_opened"] = True
+            st.rerun()
+        except Exception:
+            st.error("Snapshot tidak dapat dibuka. Data sesi aktif tidak diubah.")
+    if st.session_state.pop("_history_opened", False):
+        st.success("Snapshot riwayat berhasil dipulihkan.")
 
 
 def render_project_manager() -> None:
@@ -1070,6 +1186,8 @@ def render_project_manager() -> None:
                 st.rerun()
             except Exception:
                 st.error("Proyek cloud tidak dapat dibuka.")
+    st.divider()
+    render_cloud_history()
 
 
 def render_excel_import() -> None:

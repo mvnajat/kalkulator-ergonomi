@@ -228,6 +228,17 @@ section[data-testid="stSidebar"],
 [data-testid="stMetricLabel"] { color: #6c8179; }
 [data-testid="stMetricValue"] { color: var(--ui-ink); font-weight: 750; letter-spacing: -.02em; }
 
+/* Dashboard chart cards and account history remain compact across devices. */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stVegaLiteChart"]) {
+  border-radius: 16px !important;
+  border-color: var(--ui-border) !important;
+  background: #fff !important;
+}
+[data-testid="stVegaLiteChart"], [data-testid="stDataFrame"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* A small, restrained accent system gives each module an identity. */
 .theme-rose { --module-tone: #dd637c; --module-soft: #fff0f3; }
 .theme-violet { --module-tone: #8d6cc2; --module-soft: #f3edfb; }
@@ -565,6 +576,23 @@ section[data-testid="stSidebar"],
 }
 
 @media (max-width: 480px) {
+  .block-container { padding-left: .72rem !important; padding-right: .72rem !important; }
+  .upb-top-left-fixed { left: 12px; }
+  .upb-brand-title { font-size: .67rem; }
+  [data-testid="stHorizontalBlock"]:has(.st-key-nav_btn_0) > [data-testid="stColumn"] {
+    flex-basis: 102px !important;
+    min-width: 102px !important;
+  }
+  [data-testid="stHorizontalBlock"]:has(.st-key-nav_btn_0) button { font-size: .76rem !important; min-height: 44px; }
+  [data-testid="stTabs"] [data-baseweb="tab-list"] { overflow-x: auto; scrollbar-width: thin; }
+  [data-testid="stTabs"] [data-baseweb="tab"] { flex-shrink: 0; white-space: nowrap; }
+  [data-testid="stMetric"] { min-height: 84px; padding: 11px 13px !important; }
+  [data-testid="stMetricValue"] { font-size: 1.4rem; }
+  [data-testid="stDataFrame"] { overflow-x: auto; }
+  .hero-card { margin-left: 0; margin-right: 0; }
+  [data-testid="stButton"] button, [data-testid="stDownloadButton"] button {
+    min-height: 42px;
+  }
   .preview-head { margin-bottom:1.1rem; }
   .hero-preview { padding:16px; }
   .workspace-step-intro { padding: 12px; gap: .65rem; align-items: flex-start; }
