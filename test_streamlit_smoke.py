@@ -7,6 +7,19 @@ from pathlib import Path
 
 @unittest.skipUnless(importlib.util.find_spec("streamlit"), "Streamlit belum terinstal")
 class StreamlitSmokeTests(unittest.TestCase):
+    def test_dashboard_has_filters_charts_and_private_history_controls(self):
+        from streamlit.testing.v1 import AppTest
+
+        app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
+        app.button(key="side_dashboard").click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["_active_page_slug"], "dashboard")
+        self.assertTrue(any(x.key == "_dash_graph_module" for x in app.selectbox))
+        self.assertTrue(any(x.key == "_history_module_choice" for x in app.selectbox))
+        self.assertTrue(any(x.key == "_history_save" and x.disabled for x in app.button))
+        self.assertTrue(any(x.key == "_dash_status_filter" for x in app.radio))
+        self.assertEqual(len(app.tabs), 3)
+
     def test_visual_home_reflects_actual_module_progress(self):
         from streamlit.testing.v1 import AppTest
 
