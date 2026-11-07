@@ -7,6 +7,21 @@ from pathlib import Path
 
 @unittest.skipUnless(importlib.util.find_spec("streamlit"), "Streamlit belum terinstal")
 class StreamlitSmokeTests(unittest.TestCase):
+    def test_support_menu_stays_accessible_without_sidebar(self):
+        from streamlit.testing.v1 import AppTest
+
+        app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
+        self.assertFalse(app.exception)
+        self.assertEqual(len(app.get("popover")), 1)
+        self.assertTrue(any(b.key == "side_dashboard" for b in app.button))
+        self.assertTrue(any(b.key == "side_impor-excel" for b in app.button))
+        self.assertTrue(any(b.key == "side_ruang-belajar" for b in app.button))
+        self.assertTrue(any(b.key == "side_analisis-postur" for b in app.button))
+
+        app.button(key="side_dashboard").click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["_active_page_slug"], "dashboard")
+
     def test_new_workspace_pages_render_without_exception(self):
         from streamlit.testing.v1 import AppTest
 
