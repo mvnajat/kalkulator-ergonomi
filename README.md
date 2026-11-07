@@ -12,6 +12,14 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Konsistensi UI/UX Modul 03–09 — November 2026
+
+- **Modul 03:** Input waktu siklus, rating Westinghouse/allowance, dan penyesuaian per elemen kini berada di tiga kartu terpisah; validasi dan kapasitas produk dibedakan dari tabel hasil. Perbandingan empat metode tetap tersedia.
+- **Modul 04–05:** Tabel pengukuran, hasil persentil, kurva normal, dan blueprint CAD 2D memiliki area kerja sendiri sehingga lebih mudah dipelajari.
+- **Modul 06–08:** Masing-masing kondisi suhu, kebisingan, dan pencahayaan ditampilkan sebagai kartu tiga pengamatan. Hasil perbandingan dan batas interpretasi tetap terlihat bersama.
+- **Modul 09:** Input NIOSH, ilustrasi Snook, model L5/S1, dan skenario perbaikan lebih terstruktur; angka simulasi tetap dibedakan dari hasil pengamatan dan panduan resmi.
+- Semua kartu memakai komponen judul yang sama dengan aksen visual per modul, ruang analisis lebih luas, dan susunan kolom yang adaptif. **Tidak ada perubahan pada rumus, widget data, identitas kunci, database, atau format ekspor.**
+
 ### Workspace Modul 02 — November 2026
 
 - Alur data postur dipisahkan menjadi kartu ambil foto/kamera, tinjau hasil deteksi, dan input skor manual. Sudut tubuh dari deteksi AI disimpan dalam panel detail yang dapat dibuka saat diperlukan.

@@ -194,6 +194,35 @@ class StreamlitSmokeTests(unittest.TestCase):
         self.assertTrue(any("Buka Kalkulator Input Skor RULA / OWAS / REBA Detail" in b.label for b in app.button))
         self.assertEqual(app.session_state["modul_02"]["records"], original_records)
 
+    def test_module03_cards_preserve_time_study_inputs_and_comparison(self):
+        from html import unescape
+        from streamlit.testing.v1 import AppTest
+
+        app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
+        first_cycle = app.session_state["modul_03"]["df_siklus"][0].copy()
+        app.button(key="open_Modul 03").click().run()
+        self.assertFalse(app.exception)
+        titles = [unescape(item.value) for item in app.markdown if 'class="module-panel-heading' in item.value]
+        self.assertEqual(len(titles), 6)
+        for title in (
+            "Catat waktu siklus", "Penyesuaian & kelonggaran", "Metode penyesuaian per elemen",
+            "Waktu normal, baku & uji data", "Kesimpulan validasi & kapasitas", "Pembahasan waktu kerja",
+        ):
+            self.assertTrue(any(title in text for text in titles), title)
+        self.assertEqual(app.session_state["modul_03"]["df_siklus"][0], first_cycle)
+        self.assertTrue(any("Metode yang digunakan" in item.label for item in app.selectbox))
+        self.assertTrue(any("Bandingkan empat metode" in item.label for item in app.get("expander")))
+
+    def test_remaining_modules_share_panel_styles_and_keep_9_page_routes(self):
+        source = Path(__file__).with_name("app.py").read_text(encoding="utf-8")
+        css = Path(__file__).with_name("ui_refresh.css").read_text(encoding="utf-8")
+        for number in (4, 5, 9):
+            with self.subTest(modul=number):
+                self.assertIn(f'module_panel_title("modul-{number:02d}"', source)
+        self.assertIn('module_panel_title(f"modul-{nomor}"', source)
+        self.assertIn('[data-testid="stVerticalBlockBorderWrapper"]:has(.module-panel-heading)', css)
+        self.assertIn("@media (max-width: 850px)", css)
+
 
 if __name__ == "__main__":
     unittest.main()
