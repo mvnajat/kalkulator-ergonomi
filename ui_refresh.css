@@ -102,14 +102,14 @@ section[data-testid="stSidebar"],
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(325px, .85fr);
   align-items: center;
-  gap: clamp(22px, 3vw, 48px);
+  gap: clamp(22px, 3vw, 42px);
   overflow: hidden;
   background: linear-gradient(128deg, #103d33 0%, #176b4b 57%, #23865f 100%) !important;
   border: 1px solid #216a4f !important;
   border-radius: 24px !important;
-  padding: clamp(28px, 4vw, 46px) !important;
+  padding: clamp(26px, 3vw, 36px) !important;
   margin-top: .2rem !important;
-  margin-bottom: 15px !important;
+  margin-bottom: 12px !important;
   box-shadow: 0 24px 52px rgba(19, 78, 55, .16) !important;
 }
 .hero-card:before {
@@ -138,7 +138,7 @@ section[data-testid="stSidebar"],
   color: #c3f3db !important;
   font-size: .7rem !important;
   letter-spacing: .12em;
-  margin-bottom: 1.15rem !important;
+  margin-bottom: .95rem !important;
 }
 .hero-subtitle span:not(.hero-live-dot) { opacity: .55; margin: 0 .12rem; }
 .hero-live-dot {
@@ -153,7 +153,7 @@ section[data-testid="stSidebar"],
   font-weight: 820 !important;
   line-height: 1.15;
   letter-spacing: -.038em;
-  margin: 0 0 1rem 0 !important;
+  margin: 0 0 .8rem 0 !important;
 }
 .hero-title em { color: #a7e8c2; font-style: normal; }
 .hero-desc {
@@ -162,22 +162,10 @@ section[data-testid="stSidebar"],
   line-height: 1.68;
   color: #d8eae0 !important;
 }
-.hero-feature-row { display: flex; flex-wrap: wrap; gap: .62rem; margin-top: 1.6rem; }
-.hero-feature-row span {
-  border: 1px solid rgba(211,247,226,.2);
-  background: rgba(255,255,255,.085);
-  color: #e5f9ec;
-  padding: .4rem .63rem;
-  border-radius: 999px;
-  font-size: .73rem;
-  white-space: nowrap;
-}
 .hero-footnote {
-  margin-top: 1.85rem;
+  margin-top: 1.1rem;
   font-size: .72rem;
   color: #a8d5bc;
-  border-top: 1px solid rgba(218,247,230,.18);
-  padding-top: 1rem;
 }
 .hero-preview {
   position: relative;
@@ -185,11 +173,11 @@ section[data-testid="stSidebar"],
   background: #fff;
   border: 1px solid rgba(255,255,255,.88);
   border-radius: 18px;
-  padding: 23px 23px 18px;
+  padding: 23px;
   box-shadow: 0 25px 42px rgba(1,39,25,.18);
   color: #1e3930;
 }
-.preview-head { display:flex; align-items:center; gap: .7rem; margin-bottom: 1.7rem; }
+.preview-head { display:flex; align-items:center; gap: .7rem; margin-bottom: 1.2rem; }
 .preview-mark {
   display: grid; place-items: center;
   width: 38px; height: 38px;
@@ -208,11 +196,6 @@ section[data-testid="stSidebar"],
 .preview-step { height: 7px; border-radius: 999px; background: #e4ece7; }
 .preview-step.done { background: #1e9361; }
 .preview-percent { font-size: .7rem; color: #899b91; margin-top: .55rem; }
-.preview-tasks { border-top: 1px solid #edf2ee; margin-top: 1.2rem; padding-top: .55rem; }
-.preview-tasks > div { display:flex; align-items:center; gap: .65rem; padding: .45rem .1rem; font-size: .75rem; color: #436253; }
-.preview-task-icon { display: grid; place-items:center; width: 25px; height:25px; border-radius: 7px; background:#edf6ef; color:#248257; font-size: .68rem; font-weight: 800; }
-.preview-tasks b { margin-left: auto; color: #a6b3aa; letter-spacing: .04em; font-size: .63rem; }
-.preview-note { color: #96a79a; font-size: .62rem; margin-top: .5rem; line-height: 1.45; }
 .st-key-home_start button {
   background: var(--ui-brand) !important;
   color: #fff !important;
@@ -414,8 +397,7 @@ section[data-testid="stSidebar"],
   .hero-card { padding: 24px 20px 22px !important; border-radius: 18px !important; }
   .hero-card .hero-title { font-size: clamp(1.75rem, 6vw, 2.3rem) !important; }
   .hero-card:after { width: 160px; height: 160px; top: -85px; right: -75px; }
-  .hero-feature-row { margin-top: 1.1rem; }
-  .hero-footnote { margin-top: 1.25rem; }
+  .hero-footnote { margin-top: 1.1rem; }
   .hero-preview { padding: 18px; }
   .workspace-hero { padding: 19px 18px; }
   .workspace-icon { width:48px; height:48px; }
@@ -436,8 +418,6 @@ section[data-testid="stSidebar"],
 }
 
 @media (max-width: 480px) {
-  .hero-feature-row span { font-size:.69rem; padding:.34rem .52rem; }
-  .preview-tasks { display: none; }
   .preview-head { margin-bottom:1.1rem; }
   .hero-preview { padding:16px; }
   .workspace-hero { align-items:flex-start; gap:.75rem; }
