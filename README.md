@@ -12,6 +12,14 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Penyegaran UI — November 2026
+
+- Beranda lebih ringkas: hero yang fokus pada satu tujuan, tiga tombol aksi jelas, ringkasan proyek, dan panduan awal yang dapat dibuka bila diperlukan.
+- Daftar sembilan modul kini tersusun dalam tiga kolom pada layar lebar dan satu kolom pada layar kecil; setiap kartu memiliki status, deskripsi singkat, serta tombol buka dalam satu panel.
+- Navigasi utama menjadi bilah ringkas dengan penanda halaman aktif, dan dapat digeser horizontal pada HP tanpa membuat lima baris tombol.
+- Setiap lembar kerja modul menampilkan judul, arahan pengamatan, status, tombol antarmodul, serta empat tab dengan ruang visual yang lebih tertata.
+- Warna hijau, kontras, jarak antarelemen, fokus keyboard, dan bidang input diselaraskan lewat `ui_refresh.css`. Tidak ada rumus, autentikasi, penyimpanan, atau ekspor yang diubah.
+
 ### Fase 1.5 — Penyederhanaan UI/UX dan Onboarding (Oktober 2026)
 
 - **Beranda untuk pengguna baru:** dua aksi utama (**Mulai praktikum** dan **Coba Modul 01**), panduan tiga langkah yang bisa ditutup, progres 9 modul, serta penjelasan bahwa data bawaan adalah simulasi.
