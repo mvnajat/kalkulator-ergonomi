@@ -1462,29 +1462,30 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
     # --- MODUL 02: POSTUR KERJA + AI POSE ESTIMATION ---
     elif chosen == "Modul 02 - Postur Kerja":
         with step_tabs[0]:
-            st.markdown("##### 🤖 Deteksi Sudut Postur Otomatis (Unggah Foto atau Potret dari Kamera)")
-            tab_upload, tab_kamera = st.tabs(["📁 Unggah File Foto (JPG/PNG)", "📸 Potret Langsung dari Kamera"])
-
             semua_gambar = []
+            with st.container(border=True):
+                st.markdown('<div class="m02-section-heading"><span>01</span><strong>Ambil bukti postur kerja</strong></div>', unsafe_allow_html=True)
+                st.caption("Unggah foto atau gunakan kamera. Deteksi AI memberi saran awal dan tetap perlu diverifikasi secara manual.")
+                tab_upload, tab_kamera = st.tabs(["📁 Unggah Foto", "📸 Kamera Perangkat"])
 
-            with tab_upload:
-                uploaded_imgs = st.file_uploader(
-                    "Pilih satu atau beberapa foto postur kerja:",
-                    type=["png", "jpg", "jpeg"],
-                    accept_multiple_files=True,
-                    key="upload_m2"
-                )
-                if uploaded_imgs:
-                    semua_gambar.extend(uploaded_imgs)
+                with tab_upload:
+                    uploaded_imgs = st.file_uploader(
+                        "Pilih satu atau beberapa foto postur kerja:",
+                        type=["png", "jpg", "jpeg"],
+                        accept_multiple_files=True,
+                        key="upload_m2"
+                    )
+                    if uploaded_imgs:
+                        semua_gambar.extend(uploaded_imgs)
 
-            with tab_kamera:
-                st.caption("Gunakan kamera laptop (Webcam) atau kamera belakang HP saat praktikum berlangsung.")
-                aktifkan_kamera = st.checkbox("🟢 Aktifkan Kamera Perangkat", value=False)
-                if aktifkan_kamera:
-                    cam_img = st.camera_input("Arahkan kamera ke samping tubuh operator lalu klik 'Take Photo'")
-                    if cam_img is not None:
-                        cam_img.name = f"Kamera_Postur_{datetime.now().strftime('%H%M%S')}.jpg"
-                        semua_gambar.append(cam_img)
+                with tab_kamera:
+                    st.caption("Gunakan kamera laptop (Webcam) atau kamera belakang HP saat praktikum berlangsung.")
+                    aktifkan_kamera = st.checkbox("🟢 Aktifkan Kamera Perangkat", value=False)
+                    if aktifkan_kamera:
+                        cam_img = st.camera_input("Arahkan kamera ke samping tubuh operator lalu klik 'Take Photo'")
+                        if cam_img is not None:
+                            cam_img.name = f"Kamera_Postur_{datetime.now().strftime('%H%M%S')}.jpg"
+                            semua_gambar.append(cam_img)
 
             if semua_gambar:
                 st.session_state["modul_02"]["bukti_gambar_count"] = len(semua_gambar)
@@ -1492,41 +1493,49 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
                 opsi_target = [f"{r['id']} · {r['operator']} ({r['aktivitas']})" for r in records]
 
                 for i, img_f in enumerate(semua_gambar):
-                    st.divider()
                     pose_res = deteksi_postur_mediapipe(img_f)
-                    p_col1, p_col2 = st.columns([1.1, 1.9], gap="medium")
-                    with p_col1:
-                        st.image(pose_res["annotated_image"], caption=f"{img_f.name} ({pose_res['mode']})", use_container_width=True)
-                    with p_col2:
-                        st.markdown(f"**Hasil Ekstraksi Sudut Tubuh (`{img_f.name}`):**")
-                        st.json(pose_res["sudut"])
-                        rek = pose_res.get("skor_rekomendasi")
-                        if not pose_res.get("valid_detection") or not rek:
-                            st.warning("Pose manusia belum terdeteksi dengan andal. Skor otomatis tidak tersedia; "
-                                       "unggah foto yang memperlihatkan seluruh tubuh atau masukkan skor secara manual.")
-                        else:
-                            st.info(
-                                f"💡 **Saran skor sementara (verifikasi manual):** Lengan Atas = **{rek['ua']}**, "
-                                f"Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**"
-                            )
-                            target_idx = st.selectbox(
-                                "Pilih Aktivitas Tujuan:", range(len(records)),
-                                format_func=lambda x: opsi_target[x], key=f"target_rec_{i}"
-                            )
-                            if st.button(f"⚡ Terapkan Skor ke {records[target_idx]['id']}", key=f"apply_pose_{i}"):
-                                rec_target = st.session_state["modul_02"]["records"][target_idx]
-                                rec_target["rula_params"].update(rek)
-                                rec_target["reba_params"].update({
-                                    "ua": rek["ua"], "la": min(2, rek["la"]),
-                                    "neck": min(3, rek["nk"]), "trunk": rek["tr"]
-                                })
-                                st.success(f"Skor RULA & REBA pada {rec_target['id']} berhasil diperbarui dari foto!")
-                                st.rerun()
+                    with st.container(border=True):
+                        st.markdown(
+                            f'<div class="m02-section-heading"><span>02</span><strong>Periksa hasil foto {i + 1}</strong></div>',
+                            unsafe_allow_html=True,
+                        )
+                        p_col1, p_col2 = st.columns([1.1, 1.9], gap="medium")
+                        with p_col1:
+                            st.image(pose_res["annotated_image"], caption=f"{img_f.name} ({pose_res['mode']})", use_container_width=True)
+                        with p_col2:
+                            st.caption("Pastikan titik tubuh pada gambar sesuai sebelum menerapkan skor ke aktivitas.")
+                            with st.expander("🔎 Lihat sudut tubuh hasil deteksi"):
+                                st.json(pose_res["sudut"])
+                            rek = pose_res.get("skor_rekomendasi")
+                            if not pose_res.get("valid_detection") or not rek:
+                                st.warning("Pose manusia belum terdeteksi dengan andal. Skor otomatis tidak tersedia; "
+                                           "unggah foto yang memperlihatkan seluruh tubuh atau masukkan skor secara manual.")
+                            else:
+                                st.info(
+                                    f"💡 **Saran skor sementara (verifikasi manual):** Lengan Atas = **{rek['ua']}**, "
+                                    f"Lengan Bawah = **{rek['la']}**, Leher = **{rek['nk']}**, Punggung = **{rek['tr']}**"
+                                )
+                                target_idx = st.selectbox(
+                                    "Pilih Aktivitas Tujuan:", range(len(records)),
+                                    format_func=lambda x: opsi_target[x], key=f"target_rec_{i}"
+                                )
+                                if st.button(f"⚡ Terapkan Skor ke {records[target_idx]['id']}", key=f"apply_pose_{i}"):
+                                    rec_target = st.session_state["modul_02"]["records"][target_idx]
+                                    rec_target["rula_params"].update(rek)
+                                    rec_target["reba_params"].update({
+                                        "ua": rek["ua"], "la": min(2, rek["la"]),
+                                        "neck": min(3, rek["nk"]), "trunk": rek["tr"]
+                                    })
+                                    st.success(f"Skor RULA & REBA pada {rec_target['id']} berhasil diperbarui dari foto!")
+                                    st.rerun()
 
-            st.divider()
-            if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
-                go_to_page("analisis-postur")
+            with st.container(border=True):
+                st.markdown('<div class="m02-section-heading"><span>02</span><strong>Input skor manual</strong></div>', unsafe_allow_html=True)
+                st.caption("Tidak memiliki foto atau ingin memeriksa skor secara detail? Gunakan kalkulator RULA, OWAS, dan REBA.")
+                if st.button("🔧 Buka Kalkulator Input Skor RULA / OWAS / REBA Detail"):
+                    go_to_page("analisis-postur")
 
+            st.markdown('<div class="m02-simulation-heading">Simulasi perbaikan postur</div>', unsafe_allow_html=True)
             with st.expander("🔄 Simulasi perbaikan postur RULA (tanpa mengubah observasi)"):
                 st.caption("Gunakan skor contoh usulan untuk memahami perubahan grand score; "
                            "nilai resmi harus diperoleh dari observasi setelah perbaikan.")
@@ -1554,12 +1563,20 @@ elif st.session_state["nav_page"] == "Modul Praktikum":
             df_m2 = pd.DataFrame(calc_all["m2_rows"], columns=[
                 "Operator", "Aktivitas", "Metode", "Skor / Kode Akhir", "Action Level", "Kategori Risiko", "Rekomendasi Perbaikan"
             ])
-            st.dataframe(df_m2, use_container_width=True, hide_index=True)
+            with st.container(border=True):
+                st.markdown('<div class="m02-result-heading">Ringkasan evaluasi postur</div>', unsafe_allow_html=True)
+                st.caption("Pilih metode untuk melihat hasil dengan lebih fokus. Semua hasil tetap tersedia dalam laporan.")
+                metode_tampil = st.selectbox("Filter metode penilaian", ["Semua", "RULA", "OWAS", "REBA"], key="m02_result_filter")
+                df_m2_tampil = df_m2 if metode_tampil == "Semua" else df_m2.loc[df_m2["Metode"] == metode_tampil]
+                st.dataframe(df_m2_tampil, use_container_width=True, hide_index=True)
 
         with step_tabs[2]:
-            st.session_state["analisis_modul"]["Modul 02"] = st.text_area(
-                "Analisis & Pembahasan Modul 02:", value=st.session_state["analisis_modul"]["Modul 02"]
-            )
+            with st.container(border=True):
+                st.markdown('<div class="m02-result-heading">Pembahasan hasil pengamatan</div>', unsafe_allow_html=True)
+                st.caption("Tuliskan hasil identifikasi risiko, perbandingan antaraktivitas, dan saran perbaikan postur.")
+                st.session_state["analisis_modul"]["Modul 02"] = st.text_area(
+                    "Analisis & Pembahasan Modul 02:", value=st.session_state["analisis_modul"]["Modul 02"], height=200
+                )
 
     # --- MODUL 03: PENGUKURAN WAKTU KERJA ---
     elif chosen == "Modul 03 - Pengukuran Waktu Kerja":

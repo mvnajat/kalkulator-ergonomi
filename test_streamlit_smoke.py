@@ -170,6 +170,30 @@ class StreamlitSmokeTests(unittest.TestCase):
         # st.switch_page di rerun ke-2; interaksi pascanavigasi harus
         # diperiksa pada browser sesungguhnya, bukan dinilai gagal di sini.
 
+    def test_module02_photo_manual_simulation_and_result_filter_stay_available(self):
+        from copy import deepcopy
+        from streamlit.testing.v1 import AppTest
+
+        app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
+        original_records = deepcopy(app.session_state["modul_02"]["records"])
+        app.button(key="open_Modul 02").click().run()
+        self.assertFalse(app.exception)
+
+        markup = [item.value for item in app.markdown]
+        self.assertTrue(any("Ambil bukti postur kerja" in text for text in markup))
+        self.assertTrue(any("Input skor manual" in text for text in markup))
+        self.assertTrue(any("Simulasi perbaikan postur" in text for text in markup))
+        self.assertTrue(any("Ringkasan evaluasi postur" in text for text in markup))
+        self.assertTrue(any("Pembahasan hasil pengamatan" in text for text in markup))
+        self.assertEqual(len(app.tabs), 6)
+        self.assertEqual(app.selectbox(key="m02_result_filter").value, "Semua")
+        self.assertEqual(
+            [widget.key for widget in app.slider if widget.key and widget.key.startswith("sim_rula_")],
+            ["sim_rula_ua", "sim_rula_nk", "sim_rula_tr"],
+        )
+        self.assertTrue(any("Buka Kalkulator Input Skor RULA / OWAS / REBA Detail" in b.label for b in app.button))
+        self.assertEqual(app.session_state["modul_02"]["records"], original_records)
+
 
 if __name__ == "__main__":
     unittest.main()

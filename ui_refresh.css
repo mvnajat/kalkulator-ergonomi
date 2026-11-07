@@ -424,6 +424,38 @@ section[data-testid="stSidebar"],
 .m01-recovery-operator span { display: block; color: #7e9087; font-size: .75rem; font-weight: 500; margin-top: .22rem; }
 .m01-result-heading { font-size: 1.04rem; font-weight: 780; color: var(--ui-ink); letter-spacing: -.01em; }
 
+/* Module 02 pilot: calm photo-to-score flow, distinct manual entry and results. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.m02-section-heading),
+[data-testid="stVerticalBlockBorderWrapper"]:has(.m02-result-heading) {
+  background: #fff !important;
+  border: 1px solid #e4dfed !important;
+  border-radius: 16px !important;
+  box-shadow: 0 7px 24px rgba(87, 55, 119, .045);
+}
+.m02-section-heading {
+  display: flex;
+  align-items: center;
+  gap: .72rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid #eeeaf3;
+  margin-bottom: .25rem;
+}
+.m02-section-heading span {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  flex: 0 0 33px;
+  background: #f0eafa;
+  color: #7650a3;
+  border-radius: 10px;
+  font-size: .77rem;
+  font-weight: 850;
+}
+.m02-section-heading strong { color: var(--ui-ink); font-size: 1.01rem; font-weight: 800; }
+.m02-simulation-heading { font-size: 1.02rem; font-weight: 780; color: var(--ui-ink); padding: .75rem 0 .15rem; }
+.m02-result-heading { color: var(--ui-ink); font-size: 1.08rem; font-weight: 800; letter-spacing: -.015em; }
+
 /* Comfortable input affordances and repeated data tables. */
 [data-testid="stTextInput"] input,
 [data-testid="stNumberInput"] input,
@@ -504,6 +536,7 @@ section[data-testid="stSidebar"],
   .workspace-step-count { flex-basis: 34px; width: 34px; height: 34px; }
   .workspace-step-name { font-size: .93rem; }
   .m01-recovery-heading strong { font-size: .98rem; }
+  .m02-section-heading strong { font-size: .95rem; }
   .workspace-hero { align-items:flex-start; gap:.75rem; }
   .workspace-title { font-size:1.28rem; }
 }
