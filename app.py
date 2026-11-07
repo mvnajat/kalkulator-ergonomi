@@ -340,7 +340,6 @@ def init_session_state():
     st.session_state["nav_page"] = "Beranda"
     st.session_state["selected_modul"] = "Modul 01 - Fisiologi Kerja"
     st.session_state["ux_mode"] = "Pemula"
-    st.session_state["ux_guide_dismissed"] = False
     st.session_state["project_name"] = "Praktikum Ergonomi - Proyek 1"
     st.session_state["module_done"] = {}
     st.session_state["_local_projects"] = {}
@@ -1163,11 +1162,6 @@ if st.session_state["nav_page"] == "Beranda":
           <div class="hero-subtitle"><span class="hero-live-dot"></span> IE TOOLKIT <span>·</span> WORKSPACE PRAKTIKUM</div>
           <h1 class="hero-title">Praktikum lebih mudah.<br><em>Hasil lebih terarah.</em></h1>
           <p class="hero-desc">Dari pengamatan hingga laporan, semua tersusun dalam satu workspace ergonomi yang mudah digunakan.</p>
-          <div class="hero-feature-row">
-            <span>✓ 9 modul terintegrasi</span>
-            <span>✓ Hasil &amp; analisis</span>
-            <span>✓ Ekspor laporan</span>
-          </div>
           <div class="hero-footnote">{hero_identitas}</div>
         </div>
         <div class="hero-preview" aria-label="Ringkasan progres {hero_done_count} dari 9 modul diperiksa">
@@ -1180,12 +1174,6 @@ if st.session_state["nav_page"] == "Beranda":
           <div class="preview-value">{hero_done_count:02d}<span> / 09</span></div>
           <div class="preview-steps">{hero_steps}</div>
           <div class="preview-percent">{hero_percent}% dari keseluruhan modul</div>
-          <div class="preview-tasks">
-            <div><span class="preview-task-icon">01</span><span>Input pengamatan</span><b>DATA</b></div>
-            <div><span class="preview-task-icon">02</span><span>Analisis otomatis</span><b>HASIL</b></div>
-            <div><span class="preview-task-icon">03</span><span>Dokumentasi</span><b>PDF</b></div>
-          </div>
-          <div class="preview-note">Progres hanya bertambah setelah modul ditandai selesai.</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1202,56 +1190,19 @@ total_bukti_gambar = st.session_state["modul_02"]["bukti_gambar_count"]
 # -----------------------------------------------------------------------------
 if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
     if st.session_state["nav_page"] == "Beranda":
-        start_col, demo_col, more_col = st.columns([1.25, 1.45, 1.1], gap="small")
+        start_col, more_col = st.columns([1, 1], gap="small")
         with start_col:
             if st.button("Mulai praktikum →", key="home_start", type="primary", use_container_width=True):
                 go_to_page("identitas")
-        with demo_col:
-            if st.button("Coba Modul 01 dengan data contoh", key="home_demo", use_container_width=True):
-                go_to_page("modul-01")
         with more_col:
             if st.button("Lihat semua modul", key="home_all_modules", use_container_width=True):
                 go_to_page("daftar-modul")
-
-        done_count = sum(bool(st.session_state["module_done"].get(s)) for s in MODULE_ORDER)
-        st.markdown("<div class='section-heading'><span>RINGKASAN PROYEK</span></div>", unsafe_allow_html=True)
-        stat1, stat2, stat3 = st.columns(3, gap="small")
-        stat1.metric("Total modul", "09", help="Sembilan modul praktikum tersedia.")
-        stat2.metric("Sudah diperiksa", f"{done_count:02d} / 09")
-        stat3.metric("Status proyek", "Aktif")
-        st.caption(f"Proyek: **{st.session_state['project_name']}** · Data awal adalah contoh latihan, "
-                   "bukan hasil pengamatan nyata.")
-        if not st.session_state.get("ux_guide_dismissed", False):
-            with st.expander("👋 Pengguna baru? Lihat 3 langkah singkat", expanded=False):
-                a, b, c = st.columns(3)
-                a.markdown("**01 · Identitas**  \nIsi informasi kelompok & operator.")
-                b.markdown("**02 · Pengamatan**  \nKerjakan modul dengan data asli.")
-                c.markdown("**03 · Laporan**  \nTinjau hasil dan ekspor.")
-                st.caption("Data sesi bisa hilang ketika sesi berakhir. Simpan ke Proyek Saya atau unduh JSON. "
-                           "Aplikasi ini adalah alat bantu edukasi, bukan sertifikasi K3.")
-                if st.button("Sembunyikan panduan", key="home_dismiss_guide"):
-                    st.session_state["ux_guide_dismissed"] = True
-                    st.rerun()
-
-        with st.expander("Akses cepat & alat pendukung", expanded=False):
-            tools_cols = st.columns(4)
-            for col, (label, slug) in zip(tools_cols, (
-                ("📊 Dashboard", "dashboard"), ("💾 Proyek", "proyek"),
-                ("📥 Impor Excel", "impor-excel"), ("📖 Belajar", "ruang-belajar"),
-            )):
-                with col:
-                    if st.button(label, key=f"home_tool_{slug}", use_container_width=True):
-                        go_to_page(slug)
+        st.caption("Data awal hanya contoh latihan. Ganti dengan hasil pengamatan sebelum membuat laporan.")
     if st.session_state["nav_page"] == "Daftar Modul":
         st.subheader("Daftar Modul Praktikum")
         st.caption("Pilih satu dari sembilan modul. Setiap modul memiliki lembar kerja dan halaman hasil sendiri.")
     else:
-        st.markdown("<div class='section-heading'><span>PILIH MODUL PRAKTIKUM</span></div>", unsafe_allow_html=True)
-
-    search_q = st.text_input(
-        "Cari modul",
-        placeholder="Cari modul: fisiologi, RULA, antropometri, NIOSH, atau nomor 01–09",
-    ).strip().lower()
+        st.markdown("<div class='section-heading'><span>MULAI DARI MODUL</span></div>", unsafe_allow_html=True)
 
     modules_meta = [
         ("Modul 01", "Fisiologi Kerja", "Denyut nadi dua operator, pemulihan P0–P5, %CVL, dan energi kerja.", "modul-01"),
@@ -1265,11 +1216,18 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
         ("Modul 09", "MMH (NIOSH, Snook & L5/S1)", "Analisis pengangkatan beban, Lifting Index, dan biomekanika.", "modul-09"),
     ]
 
-    filtered_mods = [
-        m for m in modules_meta
-        if search_q == "" or search_q in m[0].lower() or search_q in m[1].lower() or search_q in m[2].lower()
-    ]
-    st.caption(f"Menampilkan **{len(filtered_mods)} dari 9 modul**")
+    if st.session_state["nav_page"] == "Daftar Modul":
+        search_q = st.text_input(
+            "Cari modul",
+            placeholder="Cari modul: fisiologi, RULA, antropometri, NIOSH, atau nomor 01–09",
+        ).strip().lower()
+        filtered_mods = [
+            m for m in modules_meta
+            if search_q == "" or search_q in m[0].lower() or search_q in m[1].lower() or search_q in m[2].lower()
+        ]
+        st.caption(f"Menampilkan **{len(filtered_mods)} dari 9 modul**")
+    else:
+        filtered_mods = modules_meta[:3]
     if not filtered_mods:
         st.info("Belum ada modul yang cocok. Coba kata kunci atau nomor yang berbeda.")
     mod_cols = st.columns(3, gap="medium")
