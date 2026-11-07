@@ -456,6 +456,36 @@ section[data-testid="stSidebar"],
 .m02-simulation-heading { font-size: 1.02rem; font-weight: 780; color: var(--ui-ink); padding: .75rem 0 .15rem; }
 .m02-result-heading { color: var(--ui-ink); font-size: 1.08rem; font-weight: 800; letter-spacing: -.015em; }
 
+/* Shared section cards for modules 03–09. Theme tokens keep each module distinctive. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.module-panel-heading) {
+  background: #fff !important;
+  border: 1px solid #e0e8e3 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 7px 22px rgba(23, 65, 49, .04);
+}
+.module-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin: 0 0 .75rem;
+  padding: 0 0 .8rem;
+  border-bottom: 1px solid #e9eeeb;
+}
+.module-panel-heading > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--module-soft);
+  color: var(--module-tone);
+  font-size: .8rem;
+  font-weight: 850;
+}
+.module-panel-heading strong { display: block; font-size: 1rem; color: var(--ui-ink); font-weight: 800; line-height: 1.4; }
+.module-panel-heading small { display: block; color: var(--ui-muted); font-size: .76rem; line-height: 1.5; margin-top: .18rem; }
+.module-panel-heading + [data-testid="stCaptionContainer"] { padding-top: .12rem; }
+
 /* Comfortable input affordances and repeated data tables. */
 [data-testid="stTextInput"] input,
 [data-testid="stNumberInput"] input,
@@ -520,6 +550,11 @@ section[data-testid="stSidebar"],
     flex: 1 1 100% !important;
     min-width: 100% !important;
   }
+  [data-testid="stHorizontalBlock"]:has(.module-panel-heading) { flex-wrap: wrap !important; }
+  [data-testid="stHorizontalBlock"]:has(.module-panel-heading) > [data-testid="stColumn"] {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+  }
   .mod-card-content { min-height: 0; }
   .mod-card-content .mod-title, .mod-card-content .mod-desc { min-height: 0; }
   [data-testid="stHorizontalBlock"]:has(.st-key-home_start) { flex-wrap: wrap !important; }
@@ -537,6 +572,9 @@ section[data-testid="stSidebar"],
   .workspace-step-name { font-size: .93rem; }
   .m01-recovery-heading strong { font-size: .98rem; }
   .m02-section-heading strong { font-size: .95rem; }
+  .module-panel-heading { align-items: flex-start; gap: .65rem; }
+  .module-panel-heading strong { font-size: .94rem; }
+  .module-panel-heading > span { flex-basis: 32px; height: 32px; }
   .workspace-hero { align-items:flex-start; gap:.75rem; }
   .workspace-title { font-size:1.28rem; }
 }
