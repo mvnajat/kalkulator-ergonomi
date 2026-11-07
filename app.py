@@ -869,8 +869,8 @@ def login_configured() -> bool:
 
 
 def render_login_widget() -> None:
-    """Keep Google account actions visible in the support sidebar."""
-    st.markdown("#### 🔐 Akun Google")
+    """Akun Google dapat diakses dari menu atas pada setiap halaman."""
+    st.markdown("##### 🔐 Akun Google")
     if not configured_project_db():
         st.caption("Cloud belum tersedia. Simpan proyek melalui file JSON.")
         return
@@ -1089,7 +1089,7 @@ nav_options = [
     ("Identitas", "identitas"), ("Proyek Saya", "proyek"),
     ("Laporan", "laporan"),
 ]
-nav_cols = st.columns(5)
+nav_cols = st.columns(6)
 active_nav_idx = next((idx for idx, (_, slug) in enumerate(nav_options)
                        if st.session_state["_active_page_slug"] == slug or
                        (slug == "daftar-modul" and st.session_state["_active_page_slug"] in MODULE_PAGE_TITLES)), 0)
@@ -1102,18 +1102,24 @@ for idx, (label, slug) in enumerate(nav_options):
         if st.button(label, key=f"nav_btn_{idx}", use_container_width=True):
             go_to_page(slug)
 
-with st.sidebar:
-    render_login_widget()
-    st.divider()
-    st.markdown("### Menu pendukung")
-    st.caption(f"Proyek: {st.session_state['project_name']}")
-    for sidebar_slug, sidebar_label in (
-        ("dashboard", "📊 Progres praktikum"),
-        ("impor-excel", "📥 Impor data Excel"), ("ruang-belajar", "📖 Panduan & rumus"),
-        ("analisis-postur", "📐 Input skor postur"),
-    ):
-        if st.button(sidebar_label, key=f"side_{sidebar_slug}", use_container_width=True):
-            go_to_page(sidebar_slug)
+with nav_cols[5]:
+    account_label = "☰ Lainnya"
+    if signed_in_user_id():
+        profile_name = str(st.user.get("name") or st.user.get("email") or "Akun")
+        account_label = f"👤 {profile_name.split()[0][:13]}" if profile_name.strip() else "👤 Akun"
+    with st.popover(account_label, key="nav_more", use_container_width=True):
+        render_login_widget()
+        st.divider()
+        st.markdown("##### Menu pendukung")
+        st.caption(f"Proyek aktif: {st.session_state['project_name']}")
+        for support_slug, support_label in (
+            ("dashboard", "📊 Progres praktikum"),
+            ("impor-excel", "📥 Impor data Excel"),
+            ("ruang-belajar", "📖 Panduan & rumus"),
+            ("analisis-postur", "📐 Input skor postur"),
+        ):
+            if st.button(support_label, key=f"side_{support_slug}", use_container_width=True):
+                go_to_page(support_slug)
 
 # A table's source must remain unchanged during cell edits. When the user
 # leaves the worksheet, its next visit will use the last saved values.
