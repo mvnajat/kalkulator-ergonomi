@@ -12,6 +12,13 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### Workspace Modul 02 — November 2026
+
+- Alur data postur dipisahkan menjadi kartu ambil foto/kamera, tinjau hasil deteksi, dan input skor manual. Sudut tubuh dari deteksi AI disimpan dalam panel detail yang dapat dibuka saat diperlukan.
+- Simulasi perbaikan RULA tetap menggunakan nilai usulan terpisah tanpa mengubah skor observasi.
+- Tabel hasil dapat difilter berdasarkan RULA, OWAS, atau REBA; pilihan awal **Semua** menjaga tampilan seluruh hasil. Area pembahasan mendapat ruang tulis lebih nyaman.
+- Rumus, rekomendasi deteksi, pengisian skor RULA/REBA, kalkulator manual, navigasi, serta ekspor laporan tetap menggunakan logika semula.
+
 ### Standar Workspace & Modul 01 — November 2026
 
 - Semua modul mendapat pengantar empat langkah yang konsisten pada tab Data, Hasil, Analisis, dan Panduan & Laporan.
