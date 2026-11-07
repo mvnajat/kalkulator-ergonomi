@@ -40,6 +40,13 @@ header[data-testid="stHeader"] {
 .upb-brand-title { font-size: .76rem; color: #23433b; letter-spacing: .075em; }
 .brand-divider { color: #a4b9b1; padding: 0 .2rem; }
 
+/* Menu bawaan Streamlit diganti dengan popover akun dan alat pendukung. */
+section[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+  display: none !important;
+}
+
 /* Main navigation: cohesive bar instead of five detached giant buttons. */
 [data-testid="stHorizontalBlock"]:has(.st-key-nav_btn_0) {
   display: flex !important;
@@ -72,6 +79,20 @@ header[data-testid="stHeader"] {
 .st-key-nav_btn_2 button:hover, .st-key-nav_btn_3 button:hover, .st-key-nav_btn_4 button:hover {
   background: #eff6f2 !important;
   color: var(--ui-brand-dark) !important;
+}
+.st-key-nav_more button {
+  background: #f0f7f3 !important;
+  color: #166a4b !important;
+  border: 1px solid #dbe9e1 !important;
+  border-radius: 10px !important;
+  min-height: 39px;
+  height: auto !important;
+  font-weight: 700;
+  font-size: .88rem;
+}
+.st-key-nav_more button:hover {
+  background: #e1f1e7 !important;
+  color: #11543d !important;
 }
 
 /* Home hero & actions */
@@ -275,6 +296,13 @@ header[data-testid="stHeader"] {
   [data-testid="stHorizontalBlock"]:has(.st-key-nav_btn_0) > [data-testid="stColumn"] {
     flex: 0 0 112px !important;
     min-width: 112px !important;
+  }
+  [data-testid="stHorizontalBlock"]:has(.st-key-nav_btn_0) > [data-testid="stColumn"]:has(.st-key-nav_more) {
+    position: sticky;
+    right: 0;
+    z-index: 5;
+    background: #fff;
+    box-shadow: -8px 0 14px rgba(255,255,255,.92);
   }
   .hero-card { padding: 22px 20px 19px !important; }
   .hero-title { font-size: 1.65rem !important; }
