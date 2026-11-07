@@ -71,6 +71,7 @@ class StreamlitSmokeTests(unittest.TestCase):
                 self.assertEqual(app.session_state["_active_page_slug"], f"modul-{nomor}")
                 self.assertEqual(app.selectbox(key=f"ux_mode_{nomor}").value, "Pemula")
                 self.assertEqual(len(app.tabs), 8 if nomor == "09" else 6 if nomor == "02" else 4)
+                self.assertEqual(sum('class="workspace-step-intro' in x.value for x in app.markdown), 4)
                 self.assertTrue(any(b.key == f"module_report_modul-{nomor}" for b in app.button))
                 self.assertTrue(any(c.key == f"done_modul-{nomor}" for c in app.checkbox))
 
@@ -147,9 +148,15 @@ class StreamlitSmokeTests(unittest.TestCase):
         app = AppTest.from_file(app_path, default_timeout=45).run()
         app.button(key="open_Modul 01").click().run()
         self.assertFalse(app.exception)
+        markup = [x.value for x in app.markdown]
+        self.assertEqual(sum('class="m01-operator-head' in value for value in markup), 2)
+        self.assertEqual(sum('class="m01-recovery-operator"' in value for value in markup), 2)
+        self.assertEqual(sum('class="m01-result-heading"' in value for value in markup), 2)
         self.assertEqual(len([w for w in app.number_input
                               if w.key and w.key.startswith("pulse_")]), 12)
         self.assertEqual(app.number_input(key="pulse_op1_P5").value, 75.0)
+        self.assertEqual(app.number_input(key="op1_dni1").value, 74.0)
+        self.assertEqual(app.number_input(key="op2_dnk2").value, 95.0)
 
         fresh = AppTest.from_file(app_path, default_timeout=45).run()
         fresh.button(key="open_Modul 03").click().run()
