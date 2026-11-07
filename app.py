@@ -308,6 +308,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Lapisan visual baru dipisahkan dari logika kalkulator agar perbaikan UI
+# tidak menyentuh perhitungan, input, dan penyimpanan proyek.
+with open(os.path.join(os.path.dirname(__file__), "ui_refresh.css"), encoding="utf-8") as css_file:
+    st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
+
 
 def get_logo_html() -> str:
     for filename in ["logo_upb.png", "logo_upb.jpg", "assets/logo_upb.png"]:
@@ -772,7 +777,7 @@ def go_to_page(slug: str) -> None:
 def render_module_navigation(place: str) -> None:
     slug = st.session_state["_active_page_slug"]
     idx = MODULE_ORDER.index(slug)
-    back_col, prev_col, progress_col, next_col = st.columns([1.35, 1.25, 2.1, 1.25])
+    back_col, prev_col, progress_col, next_col = st.columns([1.45, 1.25, 1.8, 1.25], gap="small")
     with back_col:
         if st.button("← Daftar Modul", key=f"{place}_back_list", use_container_width=True):
             go_to_page("daftar-modul")
@@ -780,7 +785,7 @@ def render_module_navigation(place: str) -> None:
         if st.button("← Sebelumnya", key=f"{place}_prev", use_container_width=True, disabled=idx == 0):
             go_to_page(MODULE_ORDER[idx - 1])
     with progress_col:
-        st.caption(f"Modul {idx + 1:02d} dari {len(MODULE_ORDER)} · Data tersimpan selama sesi aktif")
+        st.caption(f"**{idx + 1:02d} / {len(MODULE_ORDER):02d} modul** · Progres navigasi")
         st.progress((idx + 1) / len(MODULE_ORDER))
     with next_col:
         if st.button("Berikutnya →", key=f"{place}_next", use_container_width=True,
@@ -801,13 +806,28 @@ MODULE_GUIDANCE = {
 }
 
 
+def render_module_heading(slug: str) -> None:
+    """Pengenal modul yang ringkas, terpisah dari area kerja dan tab."""
+    number = slug.split("-")[-1]
+    title = escape(MODULE_PAGE_TITLES[slug].split(" - ", 1)[1])
+    guidance = escape(MODULE_GUIDANCE[number])
+    done = bool(st.session_state["module_done"].get(slug))
+    status = "Sudah diperiksa" if done else "Dalam proses"
+    st.markdown(f"""
+    <section class="workspace-hero">
+      <div class="workspace-eyebrow">LEMBAR KERJA / MODUL {number} <span>·</span> {status}</div>
+      <div class="workspace-title">{title}</div>
+      <p>{guidance}</p>
+    </section>
+    """, unsafe_allow_html=True)
+
+
 def module_workspace_tabs(slug: str):
     """Alur visual konsisten pada sembilan modul, tanpa menghapus kalkulator lama."""
     number = slug.split("-")[-1]
-    st.subheader(MODULE_PAGE_TITLES[slug])
-    left, right = st.columns([2.5, 1], vertical_alignment="bottom")
+    left, right = st.columns([2.8, 1], vertical_alignment="bottom")
     with left:
-        st.caption(MODULE_GUIDANCE[number])
+        st.caption("**Alur kerja:** Masukkan data → periksa hasil → tulis analisis → simpan laporan.")
     with right:
         modes = ["Pemula", "Lanjutan"]
         selected = st.session_state.get("ux_mode", "Pemula")
@@ -815,9 +835,6 @@ def module_workspace_tabs(slug: str):
             "Tingkat tampilan", modes, index=modes.index(selected) if selected in modes else 0,
             key=f"ux_mode_{number}", help="Pemula menampilkan ringkasan; Lanjutan membuka detail perhitungan.",
         )
-    if st.session_state["ux_mode"] == "Pemula":
-        st.info("**Panduan:** Mulai dari tab Data, lanjutkan ke Hasil, lalu tulis Analisis. "
-                "Buka tab Panduan & Laporan untuk melihat rumus dan menyimpan pekerjaan.", icon="💡")
     return st.tabs(["1 · Data", "2 · Hasil", "3 · Analisis", "4 · Panduan & Laporan"])
 
 
@@ -1058,12 +1075,12 @@ logo_tag = get_logo_html()
 identitas_hero = st.session_state["identitas"]
 hero_identitas = " · ".join((
     escape(str(identitas_hero["universitas"])),
-    f"{escape(str(identitas_hero['prodi']))} ({escape(str(identitas_hero['kelas']))})",
+    f"Kelas {escape(str(identitas_hero['kelas']))}",
 ))
 st.markdown(f"""
 <div class="upb-top-left-fixed">
     {logo_tag}
-    <span class="upb-brand-title">UNIVERSITAS PELITA BANGSA</span>
+    <span class="upb-brand-title">IE TOOLKIT <span class="brand-divider">/</span> ERGONOMI</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1073,13 +1090,16 @@ nav_options = [
     ("Laporan", "laporan"),
 ]
 nav_cols = st.columns(5)
+active_nav_idx = next((idx for idx, (_, slug) in enumerate(nav_options)
+                       if st.session_state["_active_page_slug"] == slug or
+                       (slug == "daftar-modul" and st.session_state["_active_page_slug"] in MODULE_PAGE_TITLES)), 0)
+st.markdown(f"<style>.st-key-nav_btn_{active_nav_idx} button {{background:#e8f5ee !important; "
+            "color:#126343 !important; border-color:#badfca !important; font-weight:750 !important;}}</style>",
+            unsafe_allow_html=True)
 
 for idx, (label, slug) in enumerate(nav_options):
     with nav_cols[idx]:
-        is_active = (st.session_state["_active_page_slug"] == slug or
-                     (slug == "daftar-modul" and st.session_state["_active_page_slug"] in MODULE_PAGE_TITLES))
-        btn_label = f"● {label}" if is_active else label
-        if st.button(btn_label, key=f"nav_btn_{idx}", use_container_width=True):
+        if st.button(label, key=f"nav_btn_{idx}", use_container_width=True):
             go_to_page(slug)
 
 with st.sidebar:
@@ -1103,14 +1123,16 @@ if st.session_state["nav_page"] != "Modul Praktikum":
 if st.session_state["nav_page"] == "Beranda":
     st.markdown(f"""
     <div class="hero-card">
-        <div class="hero-subtitle">{hero_identitas} · LABORATORIUM DIGITAL</div>
-        <div class="hero-title">Praktikum ergonomi, langkah demi langkah.</div>
-        <p class="hero-desc">Masukkan pengamatan, pahami perhitungannya, lalu susun laporan.
-        Mulai dari identitas kelompok atau coba satu modul dengan data contoh.</p>
+        <div class="hero-subtitle">IE TOOLKIT <span>·</span> WORKSPACE PRAKTIKUM</div>
+        <div class="hero-title">Semua kebutuhan praktikum ergonomi, di satu tempat.</div>
+        <p class="hero-desc">Catat data pengamatan, hitung dengan jelas, dan siapkan laporan.
+        Sembilan modul siap dipakai sesuai urutan praktikum kamu.</p>
+        <div class="hero-footnote">{hero_identitas}</div>
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.caption(f"IE Toolkit / {st.session_state['nav_page']} · {st.session_state['project_name']}")
+    if st.session_state["nav_page"] != "Modul Praktikum":
+        st.caption(f"IE Toolkit / {st.session_state['nav_page']} · {st.session_state['project_name']}")
 
 wib_time = datetime.now(ZoneInfo("Asia/Jakarta"))
 total_postur_records = len(st.session_state["modul_02"]["records"]) * 3
@@ -1121,28 +1143,34 @@ total_bukti_gambar = st.session_state["modul_02"]["bukti_gambar_count"]
 # -----------------------------------------------------------------------------
 if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
     if st.session_state["nav_page"] == "Beranda":
-        start_col, demo_col = st.columns([1, 1], gap="medium")
+        start_col, demo_col, more_col = st.columns([1.25, 1.45, 1.1], gap="small")
         with start_col:
             if st.button("Mulai praktikum →", key="home_start", type="primary", use_container_width=True):
                 go_to_page("identitas")
         with demo_col:
             if st.button("Coba Modul 01 dengan data contoh", key="home_demo", use_container_width=True):
                 go_to_page("modul-01")
+        with more_col:
+            if st.button("Lihat semua modul", key="home_all_modules", use_container_width=True):
+                go_to_page("daftar-modul")
 
         done_count = sum(bool(st.session_state["module_done"].get(s)) for s in MODULE_ORDER)
-        st.caption(f"Proyek: {st.session_state['project_name']} · {done_count} dari 9 modul ditandai selesai · "
-                   "Data contoh belum dianggap hasil praktikum nyata.")
-        st.progress(done_count / len(MODULE_ORDER))
+        st.markdown("<div class='section-heading'><span>RINGKASAN PROYEK</span></div>", unsafe_allow_html=True)
+        stat1, stat2, stat3 = st.columns(3, gap="small")
+        stat1.metric("Total modul", "09", help="Sembilan modul praktikum tersedia.")
+        stat2.metric("Sudah diperiksa", f"{done_count:02d} / 09")
+        stat3.metric("Status proyek", "Aktif")
+        st.caption(f"Proyek: **{st.session_state['project_name']}** · Data awal adalah contoh latihan, "
+                   "bukan hasil pengamatan nyata.")
         if not st.session_state.get("ux_guide_dismissed", False):
-            with st.container(border=True):
-                st.markdown("#### 👋 Baru pertama kali? Mulai dari sini")
+            with st.expander("👋 Pengguna baru? Lihat 3 langkah singkat", expanded=False):
                 a, b, c = st.columns(3)
-                a.markdown("**01 · Isi identitas**  \nNama kelompok dan operator.")
-                b.markdown("**02 · Kerjakan modul**  \nGanti data contoh dengan pengamatan.")
-                c.markdown("**03 · Unduh laporan**  \nPeriksa hasil lalu ekspor PDF/Excel.")
-                st.caption("Semua data tersimpan selama sesi aktif; gunakan Proyek Saya atau ekspor JSON "
-                           "sebelum menutup tab. Website ini alat bantu praktikum, bukan diagnosis atau sertifikasi K3.")
-                if st.button("Saya mengerti, tutup panduan", key="home_dismiss_guide"):
+                a.markdown("**01 · Identitas**  \nIsi informasi kelompok & operator.")
+                b.markdown("**02 · Pengamatan**  \nKerjakan modul dengan data asli.")
+                c.markdown("**03 · Laporan**  \nTinjau hasil dan ekspor.")
+                st.caption("Data sesi bisa hilang ketika sesi berakhir. Simpan ke Proyek Saya atau unduh JSON. "
+                           "Aplikasi ini adalah alat bantu edukasi, bukan sertifikasi K3.")
+                if st.button("Sembunyikan panduan", key="home_dismiss_guide"):
                     st.session_state["ux_guide_dismissed"] = True
                     st.rerun()
 
@@ -1156,66 +1184,51 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
                     if st.button(label, key=f"home_tool_{slug}", use_container_width=True):
                         go_to_page(slug)
     if st.session_state["nav_page"] == "Daftar Modul":
-        st.subheader("📚 Daftar 9 Modul Praktikum")
-        st.caption("Klik kartu untuk masuk ke halaman khusus modul. Tombol Back browser dan navigasi antarmodul dapat digunakan.")
-    left_col, right_col = st.columns([0.85, 2.8], gap="large")
+        st.subheader("Daftar Modul Praktikum")
+        st.caption("Pilih satu dari sembilan modul. Setiap modul memiliki lembar kerja dan halaman hasil sendiri.")
+    else:
+        st.markdown("<div class='section-heading'><span>PILIH MODUL PRAKTIKUM</span></div>", unsafe_allow_html=True)
 
-    with left_col:
-        st.markdown(f"""
-        <div class="panel-card">
-            <h4 style="margin:0 0 12px 0; color:#0f172a; font-size:1.05rem;">Sekilas aplikasi</h4>
-            <div class="summary-item">
-                <div class="summary-val">{wib_time.strftime('%d-%m-%Y · %H:%M WIB')}</div>
-                <div class="summary-sub">Waktu Server Lokal (Asia/Jakarta)</div>
-            </div>
-            <div class="summary-item"><div class="summary-val">9 modul terintegrasi</div>
-                <div class="summary-sub">Dari fisiologi hingga pemindahan material</div></div>
-            <div class="summary-item"><div class="summary-val">Laporan PDF & Excel</div>
-                <div class="summary-sub">Hasil dan rumus bisa ditelusuri kembali</div></div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.session_state["nav_page"] == "Beranda":
-            if st.button("Lihat daftar semua modul →", key="home_all_modules", use_container_width=True):
-                go_to_page("daftar-modul")
+    search_q = st.text_input(
+        "Cari modul",
+        placeholder="Cari modul: fisiologi, RULA, antropometri, NIOSH, atau nomor 01–09",
+    ).strip().lower()
 
-    with right_col:
-        st.markdown("#### Pilih modul yang ingin dikerjakan")
-        search_q = st.text_input(
-            "Cari modul",
-            placeholder="Cari berdasarkan nama atau nomor modul (misal: NIOSH, Antropometri, RULA, 09)...",
-            label_visibility="collapsed",
-        ).strip().lower()
+    modules_meta = [
+        ("Modul 01", "Fisiologi Kerja", "Denyut nadi dua operator, pemulihan P0–P5, %CVL, dan energi kerja.", "modul-01"),
+        ("Modul 02", "Postur Kerja & AI Pose", "Evaluasi RULA, OWAS, REBA dengan bantuan foto dan deteksi sudut.", "modul-02"),
+        ("Modul 03", "Pengukuran Waktu Kerja", "Waktu siklus, Westinghouse, allowance, dan waktu baku.", "modul-03"),
+        ("Modul 04", "Antropometri (32 Dimensi)", "Statistik dimensi tubuh, persentil, dan kurva normal.", "modul-04"),
+        ("Modul 05", "Antropometri Lanjutan & CAD 2D", "Uji data dan rancangan stasiun kerja melalui blueprint 2D.", "modul-05"),
+        ("Modul 06", "Temperatur Ruang", "Perbandingan kondisi dingin dan panas beserta uji statistik.", "modul-06"),
+        ("Modul 07", "Kebisingan (dBA)", "Pengamatan intensitas suara dan evaluasi kondisi kerja.", "modul-07"),
+        ("Modul 08", "Pencahayaan (Lux)", "Pengamatan pencahayaan normal dan gelap serta analisisnya.", "modul-08"),
+        ("Modul 09", "MMH (NIOSH, Snook & L5/S1)", "Analisis pengangkatan beban, Lifting Index, dan biomekanika.", "modul-09"),
+    ]
 
-        modules_meta = [
-            ("Modul 01", "Fisiologi Kerja", "Dua operator, kondisi normal dan setelah aktivitas, nadi kerja, konsumsi energi serta perhitungan %CVL.", "modul-01"),
-            ("Modul 02", "Postur Kerja & AI Pose", "Evaluasi postur kerja terpadu (RULA, OWAS, REBA) dilengkapi deteksi sudut otomatis dari foto.", "modul-02"),
-            ("Modul 03", "Pengukuran Waktu Kerja", "Tujuh elemen kerja, rating Westinghouse, allowance, uji keseragaman, kecukupan & waktu baku.", "modul-03"),
-            ("Modul 04", "Antropometri (32 Dimensi)", "32 dimensi tubuh, uji normalitas Shapiro-Wilk, kurva Gaussian interaktif, dan Database Populasi.", "modul-04"),
-            ("Modul 05", "Antropometri Lanjutan & CAD 2D", "Uji keseragaman, kecukupan data, serta blueprint visual 2D kursi & meja stasiun kerja.", "modul-05"),
-            ("Modul 06", "Temperatur Ruang", "Perbandingan kondisi dingin/panas beserta uji-t dan indikator awal; NAB iklim kerja memerlukan ISBB.", "modul-06"),
-            ("Modul 07", "Kebisingan (dBA)", "Perbandingan kondisi normal/bising (dBA) beserta evaluasi pajanan suara.", "modul-07"),
-            ("Modul 08", "Pencahayaan (Lux)", "Perbandingan kondisi normal/gelap (Lux) beserta evaluasi standar pencahayaan.", "modul-08"),
-            ("Modul 09", "MMH (NIOSH, Snook & L5/S1)", "RWL & Lifting Index NIOSH, simulasi Snook, serta estimasi biomekanika L5/S1.", "modul-09"),
-        ]
-
-        filtered_mods = [
-            m for m in modules_meta
-            if search_q == "" or search_q in m[0].lower() or search_q in m[1].lower() or search_q in m[2].lower()
-        ]
-
-        mod_cols = st.columns(2, gap="medium")
-        for idx, (m_code, m_title, m_desc, page_slug) in enumerate(filtered_mods):
-            with mod_cols[idx % 2]:
+    filtered_mods = [
+        m for m in modules_meta
+        if search_q == "" or search_q in m[0].lower() or search_q in m[1].lower() or search_q in m[2].lower()
+    ]
+    st.caption(f"Menampilkan **{len(filtered_mods)} dari 9 modul**")
+    if not filtered_mods:
+        st.info("Belum ada modul yang cocok. Coba kata kunci atau nomor yang berbeda.")
+    mod_cols = st.columns(3, gap="medium")
+    for idx, (m_code, m_title, m_desc, page_slug) in enumerate(filtered_mods):
+        with mod_cols[idx % 3]:
+            with st.container(border=True):
+                done = st.session_state["module_done"].get(page_slug)
+                badge_class = "badge-pill badge-complete" if done else "badge-pill"
+                status = "✓ Diperiksa" if done else "Belum diperiksa"
                 st.markdown(f"""
-                <div class="module-card">
-                    <span class="badge-pill">{m_code}</span>
-                    <span class="badge-done">{'Sudah diperiksa' if st.session_state['module_done'].get(page_slug) else 'Belum diperiksa'}</span>
-                    <div class="mod-title">{m_title}</div>
-                    <div class="mod-desc">{m_desc}</div>
-                    <div class="mod-footer">Data terintegrasi ke Laporan PDF & Excel</div>
+                <div class="mod-card-content">
+                    <span class="{badge_class}">{m_code}</span>
+                    <span class="badge-done">{status}</span>
+                    <div class="mod-title">{escape(m_title)}</div>
+                    <div class="mod-desc">{escape(m_desc)}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Buka lembar kerja {m_code}", key=f"open_{m_code}", use_container_width=True):
+                if st.button(f"Buka {m_code} →", key=f"open_{m_code}", use_container_width=True):
                     go_to_page(page_slug)
 
 # -----------------------------------------------------------------------------
@@ -1279,6 +1292,7 @@ elif st.session_state["nav_page"] == "Identitas":
 # -----------------------------------------------------------------------------
 elif st.session_state["nav_page"] == "Modul Praktikum":
     chosen = MODULE_PAGE_TITLES[st.session_state["_active_page_slug"]]
+    render_module_heading(st.session_state["_active_page_slug"])
     render_module_navigation("atas")
     prepare_editor_scope(st.session_state, f"Modul Praktikum:{chosen}")
     step_tabs = module_workspace_tabs(st.session_state["_active_page_slug"])
