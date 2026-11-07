@@ -351,6 +351,79 @@ section[data-testid="stSidebar"],
 [data-testid="stTabs"] [aria-selected="true"] { background: #e0f2e7 !important; color: #14593f !important; }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] { padding-top: 1.45rem; }
 
+/* Reusable four-step guide in all nine workspaces. */
+.workspace-step-intro {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  padding: 13px 17px;
+  margin-bottom: 1.3rem;
+  background: linear-gradient(105deg, var(--module-soft), #fff 78%);
+  border: 1px solid var(--ui-border);
+  border-radius: 13px;
+}
+.workspace-step-count {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--module-tone) 22%, #fff);
+  font-size: .87rem;
+  font-weight: 850;
+  color: var(--module-tone);
+}
+.workspace-step-label { font-size: .62rem; font-weight: 800; color: var(--module-tone); letter-spacing: .105em; }
+.workspace-step-name { font-size: 1rem; font-weight: 780; color: var(--ui-ink); line-height: 1.4; margin-top: .05rem; }
+.workspace-step-intro p { color: var(--ui-muted); font-size: .79rem; line-height: 1.5; margin: .1rem 0 0; }
+
+/* Module 01 pilot: separate the two operators and the pulse-recovery series. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.m01-operator-head),
+[data-testid="stVerticalBlockBorderWrapper"]:has(.m01-recovery-operator),
+[data-testid="stVerticalBlockBorderWrapper"]:has(.m01-result-heading) {
+  background: #fff !important;
+  border: 1px solid #dae5df !important;
+  border-radius: 16px !important;
+  box-shadow: 0 7px 24px rgba(22, 76, 54, .045);
+}
+.m01-operator-head {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding-bottom: .9rem;
+  border-bottom: 1px solid #e9eeea;
+}
+.m01-operator-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 43px;
+  width: 43px;
+  height: 43px;
+  border-radius: 12px;
+  background: #fceef2;
+  color: #bd5371;
+  font-size: 1.05rem;
+  font-weight: 820;
+}
+.operator-b .m01-operator-avatar { background: #f1ecfa; color: #8362ae; }
+.m01-operator-head strong { display: block; font-size: 1rem; font-weight: 760; color: var(--ui-ink); line-height: 1.4; overflow-wrap: anywhere; }
+.m01-operator-head small { display: block; font-size: .75rem; color: #7e9087; margin-top: .12rem; }
+.m01-activity-label {
+  font-size: .69rem;
+  font-weight: 820;
+  letter-spacing: .115em;
+  color: #9a6979;
+  margin: .65rem 0 -.2rem;
+}
+.m01-recovery-heading { display: flex; align-items: center; gap: .7rem; margin: 1.65rem 0 .35rem; }
+.m01-recovery-heading span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: #fceef2; color: #be5872; font-size: .74rem; font-weight: 820; }
+.m01-recovery-heading strong { color: var(--ui-ink); font-weight: 780; font-size: 1.12rem; }
+.m01-recovery-operator { font-size: .95rem; font-weight: 770; color: #344b42; }
+.m01-recovery-operator span { display: block; color: #7e9087; font-size: .75rem; font-weight: 500; margin-top: .22rem; }
+.m01-result-heading { font-size: 1.04rem; font-weight: 780; color: var(--ui-ink); letter-spacing: -.01em; }
+
 /* Comfortable input affordances and repeated data tables. */
 [data-testid="stTextInput"] input,
 [data-testid="stNumberInput"] input,
@@ -408,6 +481,13 @@ section[data-testid="stSidebar"],
     flex: 1 1 100% !important;
     min-width: 100% !important;
   }
+  [data-testid="stHorizontalBlock"]:has(.m01-operator-head),
+  [data-testid="stHorizontalBlock"]:has(.m01-recovery-operator) { flex-wrap: wrap !important; }
+  [data-testid="stHorizontalBlock"]:has(.m01-operator-head) > [data-testid="stColumn"],
+  [data-testid="stHorizontalBlock"]:has(.m01-recovery-operator) > [data-testid="stColumn"] {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+  }
   .mod-card-content { min-height: 0; }
   .mod-card-content .mod-title, .mod-card-content .mod-desc { min-height: 0; }
   [data-testid="stHorizontalBlock"]:has(.st-key-home_start) { flex-wrap: wrap !important; }
@@ -420,6 +500,10 @@ section[data-testid="stSidebar"],
 @media (max-width: 480px) {
   .preview-head { margin-bottom:1.1rem; }
   .hero-preview { padding:16px; }
+  .workspace-step-intro { padding: 12px; gap: .65rem; align-items: flex-start; }
+  .workspace-step-count { flex-basis: 34px; width: 34px; height: 34px; }
+  .workspace-step-name { font-size: .93rem; }
+  .m01-recovery-heading strong { font-size: .98rem; }
   .workspace-hero { align-items:flex-start; gap:.75rem; }
   .workspace-title { font-size:1.28rem; }
 }
