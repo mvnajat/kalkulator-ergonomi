@@ -806,6 +806,28 @@ MODULE_GUIDANCE = {
 }
 
 
+# Ikon SVG ringan dan kategori visual; seluruhnya dekoratif, tidak terkait rumus.
+MODULE_VISUALS = {
+    "modul-01": ("rose", "Fisiologi", '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/><path d="M3 12h5l2-3 3 6 2-3h6"/>'),
+    "modul-02": ("violet", "Postur & AI", '<circle cx="12" cy="4" r="2"/><path d="m9 22 2-7-2-4-5 2m11 9-2-7 2-4 5 2M9 8l3 3 3-3"/>'),
+    "modul-03": ("amber", "Studi Waktu", '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6M12 2v3"/>'),
+    "modul-04": ("cyan", "Antropometri", '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 4v5m4-5v3m4-3v5M4 13h5m-5 4h3"/>'),
+    "modul-05": ("indigo", "Perancangan", '<path d="m4 20 8-16 8 16H4Z"/><path d="M8 16h8M12 4v16"/>'),
+    "modul-06": ("orange", "Lingkungan", '<path d="M10 14.3V5a2 2 0 1 1 4 0v9.3a4 4 0 1 1-4 0Z"/><path d="M12 9v9"/>'),
+    "modul-07": ("blue", "Lingkungan", '<path d="M4 9h4l5-4v14l-5-4H4V9Zm12-1a5 5 0 0 1 0 8m2-11a9 9 0 0 1 0 14"/>'),
+    "modul-08": ("yellow", "Lingkungan", '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+    "modul-09": ("teal", "Material Handling", '<path d="m12 2 9 5-9 5-9-5 9-5Zm-9 5v10l9 5 9-5V7M12 12v10"/>'),
+}
+
+
+def module_icon(slug: str) -> str:
+    """Ikon presentasional dari jalur SVG yang ditentukan di sumber kode."""
+    path = MODULE_VISUALS[slug][2]
+    return (f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            f'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" '
+            f'aria-hidden="true">{path}</svg>')
+
+
 def render_module_heading(slug: str) -> None:
     """Pengenal modul yang ringkas, terpisah dari area kerja dan tab."""
     number = slug.split("-")[-1]
@@ -813,11 +835,15 @@ def render_module_heading(slug: str) -> None:
     guidance = escape(MODULE_GUIDANCE[number])
     done = bool(st.session_state["module_done"].get(slug))
     status = "Sudah diperiksa" if done else "Dalam proses"
+    theme, category, _ = MODULE_VISUALS[slug]
     st.markdown(f"""
-    <section class="workspace-hero">
-      <div class="workspace-eyebrow">LEMBAR KERJA / MODUL {number} <span>·</span> {status}</div>
-      <div class="workspace-title">{title}</div>
-      <p>{guidance}</p>
+    <section class="workspace-hero theme-{theme}">
+      <div class="workspace-icon module-icon">{module_icon(slug)}</div>
+      <div class="workspace-copy">
+        <div class="workspace-eyebrow">MODUL {number} / {escape(category)} <span>·</span> {status}</div>
+        <div class="workspace-title">{title}</div>
+        <p>{guidance}</p>
+      </div>
     </section>
     """, unsafe_allow_html=True)
 
@@ -1127,13 +1153,40 @@ if st.session_state["nav_page"] != "Modul Praktikum":
     prepare_editor_scope(st.session_state, st.session_state["nav_page"])
 
 if st.session_state["nav_page"] == "Beranda":
+    hero_done_count = sum(bool(st.session_state["module_done"].get(s)) for s in MODULE_ORDER)
+    hero_percent = round(hero_done_count / len(MODULE_ORDER) * 100)
+    hero_steps = "".join('<span class="preview-step done"></span>' if idx < hero_done_count
+                         else '<span class="preview-step"></span>' for idx in range(len(MODULE_ORDER)))
     st.markdown(f"""
     <div class="hero-card">
-        <div class="hero-subtitle">IE TOOLKIT <span>·</span> WORKSPACE PRAKTIKUM</div>
-        <div class="hero-title">Semua kebutuhan praktikum ergonomi, di satu tempat.</div>
-        <p class="hero-desc">Catat data pengamatan, hitung dengan jelas, dan siapkan laporan.
-        Sembilan modul siap dipakai sesuai urutan praktikum kamu.</p>
-        <div class="hero-footnote">{hero_identitas}</div>
+        <div class="hero-copy">
+          <div class="hero-subtitle"><span class="hero-live-dot"></span> IE TOOLKIT <span>·</span> WORKSPACE PRAKTIKUM</div>
+          <h1 class="hero-title">Praktikum lebih mudah.<br><em>Hasil lebih terarah.</em></h1>
+          <p class="hero-desc">Dari pengamatan hingga laporan, semua tersusun dalam satu workspace ergonomi yang mudah digunakan.</p>
+          <div class="hero-feature-row">
+            <span>✓ 9 modul terintegrasi</span>
+            <span>✓ Hasil &amp; analisis</span>
+            <span>✓ Ekspor laporan</span>
+          </div>
+          <div class="hero-footnote">{hero_identitas}</div>
+        </div>
+        <div class="hero-preview" aria-label="Ringkasan progres {hero_done_count} dari 9 modul diperiksa">
+          <div class="preview-head">
+            <div class="preview-mark">✦</div>
+            <div><strong>Workspace Praktikum</strong><small>Ringkasan kemajuan belajar</small></div>
+            <span class="preview-live">AKTIF</span>
+          </div>
+          <div class="preview-label">Modul sudah diperiksa</div>
+          <div class="preview-value">{hero_done_count:02d}<span> / 09</span></div>
+          <div class="preview-steps">{hero_steps}</div>
+          <div class="preview-percent">{hero_percent}% dari keseluruhan modul</div>
+          <div class="preview-tasks">
+            <div><span class="preview-task-icon">01</span><span>Input pengamatan</span><b>DATA</b></div>
+            <div><span class="preview-task-icon">02</span><span>Analisis otomatis</span><b>HASIL</b></div>
+            <div><span class="preview-task-icon">03</span><span>Dokumentasi</span><b>PDF</b></div>
+          </div>
+          <div class="preview-note">Progres hanya bertambah setelah modul ditandai selesai.</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 else:
@@ -1224,14 +1277,20 @@ if st.session_state["nav_page"] in ("Beranda", "Daftar Modul"):
         with mod_cols[idx % 3]:
             with st.container(border=True):
                 done = st.session_state["module_done"].get(page_slug)
-                badge_class = "badge-pill badge-complete" if done else "badge-pill"
                 status = "✓ Diperiksa" if done else "Belum diperiksa"
+                theme, category, _ = MODULE_VISUALS[page_slug]
                 st.markdown(f"""
-                <div class="mod-card-content">
-                    <span class="{badge_class}">{m_code}</span>
-                    <span class="badge-done">{status}</span>
+                <div class="mod-card-content theme-{theme}">
+                    <div class="mod-card-top">
+                        <span class="module-icon">{module_icon(page_slug)}</span>
+                        <span class="mod-card-number">{m_code.upper()}</span>
+                    </div>
                     <div class="mod-title">{escape(m_title)}</div>
                     <div class="mod-desc">{escape(m_desc)}</div>
+                    <div class="mod-card-bottom">
+                        <span class="mod-category">{escape(category)}</span>
+                        <span class="mod-status{' is-done' if done else ''}">{status}</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 if st.button(f"Buka {m_code} →", key=f"open_{m_code}", use_container_width=True):

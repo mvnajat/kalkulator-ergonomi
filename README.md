@@ -12,6 +12,13 @@ Aplikasi web berbasis **Streamlit** untuk pengolahan data **Praktikum Ergonomi &
 
 ## Pembaruan Terbaru
 
+### ErgoLab Visual Refresh — November 2026
+
+- Beranda kini memakai hero emerald dua kolom dengan kartu progres dinamis berdasarkan jumlah modul yang sudah diperiksa, bukan angka capaian palsu.
+- Setiap modul memperoleh ikon SVG ringan, kategori, warna aksen lembut, status, dan kartu yang lebih mudah dipindai secara visual.
+- Header lembar kerja modul menampilkan ikon dan warna yang sesuai dengan kartu modul; isi kalkulator, hasil, analisis, dan navigasi tetap sama.
+- Tata letak hero dan kartu progres diringkas pada layar tablet dan HP tanpa dependensi gambar atau font dari luar.
+
 ### Menu Akun dan Alat Pendukung — November 2026
 
 - Sidebar kiri yang menyempitkan area kerja telah dihilangkan dari antarmuka utama.

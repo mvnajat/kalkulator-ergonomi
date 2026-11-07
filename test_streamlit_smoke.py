@@ -7,6 +7,20 @@ from pathlib import Path
 
 @unittest.skipUnless(importlib.util.find_spec("streamlit"), "Streamlit belum terinstal")
 class StreamlitSmokeTests(unittest.TestCase):
+    def test_visual_home_reflects_actual_module_progress(self):
+        from streamlit.testing.v1 import AppTest
+
+        app = AppTest.from_file(str(Path(__file__).with_name("app.py")), default_timeout=45).run()
+        self.assertFalse(app.exception)
+        markup = [item.value for item in app.markdown]
+        self.assertEqual(sum('<div class="mod-card-content' in value for value in markup), 9)
+        self.assertTrue(any('class="hero-preview"' in value for value in markup))
+
+        app.session_state["module_done"]["modul-01"] = True
+        app.run()
+        updated_markup = [item.value for item in app.markdown]
+        self.assertTrue(any('class="preview-value">01' in value for value in updated_markup))
+
     def test_support_menu_stays_accessible_without_sidebar(self):
         from streamlit.testing.v1 import AppTest
 
